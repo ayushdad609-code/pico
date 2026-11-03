@@ -1,0 +1,88 @@
+# Pico ₹0 Backend Docker Compose
+# Based on 32_FREE_BACKEND.pdf (§1 Stack at a Glance, §2 Oracle Always Free)
+# Designed to fit comfortably within 2 OCPU / 12 GB RAM
+
+version: '3.8'
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    container_name: pico_caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - api
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pico_api
+    restart: unless-stopped
+    environment:
+      - DATABASE_URL=postgresql://pico_user:${POSTGRES_PASSWORD}@postgres:5432/pico_db
+      - REDIS_URL=redis://redis:6379/0
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - OLLAMA_HOST=http://ollama:11434
+    depends_on:
+      - postgres
+      - redis
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pico_worker
+    restart: unless-stopped
+    command: python3 -m pico.heartbeat_daemon
+    environment:
+      - DATABASE_URL=postgresql://pico_user:${POSTGRES_PASSWORD}@postgres:5432/pico_db
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - postgres
+      - redis
+
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: pico_postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=pico_db
+      - POSTGRES_USER=pico_user
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5432:5432"
+
+  redis:
+    image: redis:7-alpine
+    container_name: pico_redis
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    ports:
+      - "127.0.0.1:6379:6379"
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: pico_ollama
+    restart: unless-stopped
+    volumes:
+      - ollama_data:/root/.ollama
+    ports:
+      - "127.0.0.1:11434:11434"
+
+volumes:
+  caddy_data:
+  caddy_config:
+  postgres_data:
+  redis_data:
+  ollama_data:
