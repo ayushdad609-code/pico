@@ -14,8 +14,25 @@ from .models import UserProfile, EmotionSensitivity, PersonaPacket
 class LLMRouter:
     def __init__(self):
         self.groq_api_key = os.getenv("GROQ_API_KEY")
-        self.gemini_api_key = os.getenv("GEMINI_API_KEY")
+        self.gemini_api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
         self.litellm_url = os.getenv("LITELLM_URL", "http://localhost:4000")
+
+        # Fallback to load from .env files if not in environment
+        if not (self.gemini_api_key or self.groq_api_key):
+            for path in [".env", "pico/.env", "/data/data/com.termux/files/home/pico/.env", "/data/data/com.termux/files/home/supoclip/.env"]:
+                if os.path.exists(path):
+                    try:
+                        with open(path) as f:
+                            for line in f:
+                                line = line.strip()
+                                if line.startswith("GOOGLE_API_KEY=") or line.startswith("GEMINI_API_KEY="):
+                                    self.gemini_api_key = line.split("=", 1)[1].strip().strip('"').strip("'")
+                                elif line.startswith("GROQ_API_KEY="):
+                                    self.groq_api_key = line.split("=", 1)[1].strip().strip('"').strip("'")
+                        if self.gemini_api_key or self.groq_api_key:
+                            break
+                    except Exception:
+                        pass
 
     def route_and_generate(
         self,
@@ -63,24 +80,29 @@ class LLMRouter:
                 # Log fallthrough to next rung
                 pass
 
-        # If Gemini is available and allowed (NO personal context, or research only)
-        if self.gemini_api_key and not has_personal_context:
-            try:
-                import httpx
-                url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={self.gemini_api_key}"
-                payload = {
-                    "contents": [{
-                        "parts": [
-                            {"text": f"System:\n{system_prompt}\n\nUser:\n{user_message}"}
-                        ]
-                    }]
-                }
-                response = httpx.post(url, json=payload, timeout=12.0)
-                if response.status_code == 200:
-                    raw_text = response.json()["candidates"][0]["content"]["parts"][0]["text"]
-                    return self._guardrail_filter(raw_text, profile)
-            except Exception:
-                pass
+        # If Gemini is available
+        if self.gemini_api_key:
+            for model_name in ["gemini-2.5-flash", "gemini-flash-latest"]:
+                try:
+                    import httpx
+                    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={self.gemini_api_key}"
+                    payload = {
+                        "contents": [{
+                            "parts": [
+                                {"text": f"System:\n{system_prompt}\n\nUser:\n{user_message}"}
+                            ]
+                        }],
+                        "generationConfig": {
+                            "temperature": 0.7,
+                            "maxOutputTokens": 1000
+                        }
+                    }
+                    response = httpx.post(url, json=payload, timeout=12.0)
+                    if response.status_code == 200:
+                        raw_text = response.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
+                        return self._guardrail_filter(raw_text, profile)
+                except Exception:
+                    pass
 
         # Native / Local Fallback Engine (Childish & Kind generator)
         return self._local_pico_engine(user_message, packet, profile)
