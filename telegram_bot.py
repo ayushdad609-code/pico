@@ -472,22 +472,24 @@ class PicoTelegramBot:
             caption = (
                 f"🎮 **Browser Takeover Handoff**\n\n"
                 f"I've opened **{domain}** in our sandboxed browser!\n\n"
-                f"🔗 **[Tap here to take over on your phone]({takeover_url})**\n\n"
-                f"Fill in your username, password, or 2FA on the screen. "
-                f"When you are logged in, tap the green button below so I can lock in the session!"
+                f"👉 **Open this link on your phone to take control:**\n"
+                f"{takeover_url}\n\n"
+                f"1. Tap input fields on the screen to focus.\n"
+                f"2. Type your credentials with the keyboard bar.\n"
+                f"3. When you're in, tap **[✅ Done, Pico Take Over!]** below!"
             )
             keyboard = {
                 "inline_keyboard": [
-                    [{"text": "🌐 Open Interactive Screen", "url": takeover_url}],
                     [{"text": "📸 Refresh Screenshot", "callback_data": "takeover_refresh"}],
                     [{"text": "✅ Done, Pico Take Over!", "callback_data": "takeover_done"}],
                     [{"text": "❌ Cancel Handoff", "callback_data": "takeover_cancel"}]
                 ]
             }
 
+            sent = None
             if ss_bytes:
-                await self.api.send_photo(chat_id, ss_bytes, caption=caption, reply_markup=keyboard)
-            else:
+                sent = await self.api.send_photo(chat_id, ss_bytes, caption=caption, reply_markup=keyboard)
+            if not sent:
                 await self.api.send_message(chat_id, caption, reply_markup=keyboard)
             return
 

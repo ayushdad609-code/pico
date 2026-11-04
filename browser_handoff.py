@@ -106,6 +106,8 @@ class CDPClient:
         self._ws: Optional[aiohttp.ClientWebSocketResponse] = None
         self._session: Optional[aiohttp.ClientSession] = None
         self._req_id = 0
+        self._pending: Dict[int, asyncio.Future] = {}
+        self._reader_task: Optional[asyncio.Task] = None
         self._active_tab_ws: Optional[str] = None
         self.current_url: str = ""
         self.current_title: str = ""
@@ -129,10 +131,27 @@ class CDPClient:
 
             if self._active_tab_ws:
                 self._ws = await self._session.ws_connect(self._active_tab_ws)
+                if self._reader_task and not self._reader_task.done():
+                    self._reader_task.cancel()
+                self._reader_task = asyncio.create_task(self._reader_loop())
                 return True
         except Exception as e:
             logger.warning(f"CDP connection attempt failed: {e}")
         return False
+
+    async def _reader_loop(self):
+        try:
+            while self._ws and not self._ws.closed:
+                msg = await self._ws.receive_json()
+                req_id = msg.get("id")
+                if req_id and req_id in self._pending:
+                    fut = self._pending.pop(req_id)
+                    if not fut.done():
+                        fut.set_result(msg)
+        except asyncio.CancelledError:
+            pass
+        except Exception as e:
+            logger.debug(f"CDP reader loop closed: {e}")
 
     async def send_command(self, method: str, params: Optional[Dict[str, Any]] = None, timeout: float = 6.0) -> Dict[str, Any]:
         if not self._ws or self._ws.closed:
@@ -143,16 +162,18 @@ class CDPClient:
         self._req_id += 1
         msg_id = self._req_id
         payload = {"id": msg_id, "method": method, "params": params or {}}
+        loop = asyncio.get_running_loop()
+        fut = loop.create_future()
+        self._pending[msg_id] = fut
 
         try:
             await self._ws.send_json(payload)
-            start_t = time.time()
-            while time.time() - start_t < timeout:
-                raw = await self._ws.receive_json(timeout=2.0)
-                if raw.get("id") == msg_id:
-                    return raw
-            return {"error": "Timeout waiting for CDP response"}
+            return await asyncio.wait_for(fut, timeout=timeout)
+        except asyncio.TimeoutError:
+            self._pending.pop(msg_id, None)
+            return {"error": f"Timeout waiting for CDP response for {method}"}
         except Exception as e:
+            self._pending.pop(msg_id, None)
             logger.warning(f"CDP command {method} failed: {e}")
             return {"error": str(e)}
 
@@ -246,6 +267,8 @@ class CDPClient:
         return True
 
     async def close(self):
+        if self._reader_task and not self._reader_task.done():
+            self._reader_task.cancel()
         if self._ws and not self._ws.closed:
             await self._ws.close()
         if self._session and not self._session.closed:
@@ -571,6 +594,8 @@ class BrowserHandoffEngine:
 
         app = web.Application()
         app.router.add_get("/takeover", self._handle_takeover_page)
+        async def _favicon(r): return web.Response(status=204)
+        app.router.add_get("/favicon.ico", _favicon)
         app.router.add_get("/screenshot", self._handle_screenshot_get)
         app.router.add_post("/api/action", self._handle_action_post)
         app.router.add_get("/ws/stream", self._handle_ws_stream)

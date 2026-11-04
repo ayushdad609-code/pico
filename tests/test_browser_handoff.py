@@ -46,3 +46,36 @@ def test_engine_init():
     assert engine.cdp_port == 9222
     assert engine.web_port == 8765
     assert engine.vault is not None
+
+
+@pytest.mark.anyio
+async def test_engine_takeover_and_screencast():
+    import aiohttp
+    engine = BrowserHandoffEngine(cdp_port=9222, web_port=8766)
+    try:
+        res = await engine.start_takeover("https://example.com")
+        assert res["success"] is True
+
+        async with aiohttp.ClientSession() as session:
+            async with session.ws_connect("http://127.0.0.1:8766/ws/stream") as ws:
+                frame_found = False
+                for _ in range(8):
+                    msg = await ws.receive_json(timeout=3.0)
+                    if msg.get("type") == "frame":
+                        frame_found = True
+                        break
+                assert frame_found is True
+
+                await ws.send_json({"type": "click", "x": 100, "y": 100})
+                await ws.send_json({"type": "type", "text": "hello"})
+                await ws.send_json({"type": "done"})
+
+                done_ack = False
+                for _ in range(8):
+                    ack = await ws.receive_json(timeout=3.0)
+                    if ack.get("type") == "done_ack":
+                        done_ack = True
+                        break
+                assert done_ack is True
+    finally:
+        await engine.cleanup()
