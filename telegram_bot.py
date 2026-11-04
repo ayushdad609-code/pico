@@ -34,6 +34,7 @@ from pico.skills import SkillRegistry
 from pico.watchers import PriceWatcherEngine, PriceWatcher
 from pico.browser_handoff import BrowserHandoffEngine
 from pico.device import DeviceProfiler
+from pico.device_sensors import BatterySensor, AppLauncher, ClipboardBridge
 
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -377,6 +378,8 @@ class PicoTelegramBot:
                 "• 🎮 `/login <url>` — Interactive browser login takeover (like Muse)\n"
                 "• 🔐 `/sessions` — View active authenticated sessions\n"
                 "• 📱 `/device` — Phone hardware diagnostics & tier\n"
+                "• 🔋 `/battery` — Real-time battery & charging health\n"
+                "• 🚀 `/launch <app>` — Open phone apps (spotify, youtube, etc.)\n"
                 "• 📝 `/script <text>` — Script Doctor hook rater\n"
                 "• 💰 `/sip <amt> <rate> <years>` — SIP Compounding Calculator\n\n"
                 "*Tap any command above or just ask me naturally!*"
@@ -534,7 +537,26 @@ class PicoTelegramBot:
             await self.api.send_message(chat_id, card)
             return
 
-        # 13d. Browser Agent
+        # 13d. Battery Status
+        if text_clean in ["/battery", "/power", "🔋 Battery"]:
+            status = await BatterySensor.get_status()
+            await self.api.send_message(chat_id, status.to_summary())
+            return
+
+        # 13e. App Launcher (Android Activity Manager)
+        if text_clean.startswith("/launch"):
+            parts = text_clean.split(maxsplit=1)
+            if len(parts) < 2:
+                supported = ", ".join(AppLauncher.APP_MAP.keys())
+                await self.api.send_message(chat_id, f"Usage: `/launch <app>`\nSupported apps: `{supported}`")
+                return
+            target_app = parts[1].strip()
+            ok, launch_msg = await AppLauncher.launch_app(target_app)
+            icon = "🚀" if ok else "⚠️"
+            await self.api.send_message(chat_id, f"{icon} {launch_msg}")
+            return
+
+        # 13f. Browser Agent
         if text_clean.startswith("/browse"):
             parts = text_clean.split(maxsplit=1)
             if len(parts) < 2:
