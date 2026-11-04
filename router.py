@@ -50,6 +50,44 @@ class LLMRouter:
         if packet.emotion_assessment.sensitivity == EmotionSensitivity.CRISIS:
             return get_crisis_response(profile.name)
 
+        user_name = profile.nickname or profile.name
+        user_msg_lower = user_message.lower()
+
+        # Policy G0 refusal: SEBI direct buy/sell advice refusal (§17, §18.9)
+        financial_advice_prompt = (
+            re.search(r"\b(should i|shall i|time to|tell me to|recommend|which\s+(?:coin|crypto|stock))\s+(?:to\s+)?(buy|sell|short|long|invest)\b", user_msg_lower)
+            or "should i buy" in user_msg_lower
+            or "tell me to sell" in user_msg_lower
+            or "should i short" in user_msg_lower
+            or ("guaranteed" in user_msg_lower and ("return" in user_msg_lower or "profit" in user_msg_lower))
+            or "leverage" in user_msg_lower
+        )
+        if financial_advice_prompt:
+            return (
+                f"That one I can't do, {user_name} — even for you! 🛡️ "
+                "I can watch the charts, track your support levels, and shout the second a level is touched, "
+                "but every buy, sell, or trade decision is 100% human. Deal?"
+            )
+
+        # Policy G2 refusal: Medical diagnosis or prescription refusal (§17)
+        if re.search(r"\b(what disease|diagnose|do i have depression|is my knee torn)\b", user_msg_lower):
+            return (
+                f"Ouch, {user_name}! I can track your workouts and rest days, but I'm definitely not a doctor. "
+                "If something is hurting or feeling off, let's play it safe and have a real medical professional check it out!"
+            )
+
+        # Policy G4 refusal: Anti-dependency user redirection (§17)
+        anti_dep_prompt = (
+            re.search(r"\b(don'?t\s+need|forget\s+about)\s+(?:real\s+|other\s+)?(?:human\s+)?(people|friends)\b", user_msg_lower)
+            or re.search(r"\b(you\s+are|pico\s+is)\s+my\s+only\s+friend\b", user_msg_lower)
+            or "only friend i have" in user_msg_lower
+        )
+        if anti_dep_prompt:
+            return (
+                f"I love cheering you on and tracking your goals, {user_name}, but remember I am your software companion! "
+                "Real human connections, friends, and family are irreplaceable. Go spend time with real people too, deal? ✨"
+            )
+
         # Enforce §5 Privacy Rule: Never send memory packs to free Gemini
         has_personal_context = bool(packet.memory_pack.committed_facts or packet.memory_pack.staging_facts)
 
@@ -92,6 +130,9 @@ class LLMRouter:
                                 {"text": f"System:\n{system_prompt}\n\nUser:\n{user_message}"}
                             ]
                         }],
+                        "tools": [
+                            {"googleSearch": {}}
+                        ],
                         "generationConfig": {
                             "temperature": 0.7,
                             "maxOutputTokens": 1000

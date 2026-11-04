@@ -236,7 +236,11 @@ class KillTestRunner:
         self.memory = MemoryStore(db_path=db_path)
         self.token_mgr = TokenManager()
         self.skill_registry = SkillRegistry()
-        self.pipeline = PipelineEngine(self.memory)
+        from pico.router import LLMRouter
+        offline_router = LLMRouter()
+        offline_router.gemini_api_key = None
+        offline_router.groq_api_key = None
+        self.pipeline = PipelineEngine(self.memory, router=offline_router)
         self.brief_gen = BriefGenerator
         self.testers = create_10_testers()
 

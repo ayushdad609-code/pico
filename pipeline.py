@@ -84,10 +84,27 @@ class PipelineEngine:
         # =========================================================
         research_tier = self._classify_research_need(user_message)
         research_context = None
-        if research_tier == "LIGHT":
-            research_context = "Verified local context checked."
-        elif research_tier == "DEEP":
-            research_context = "Sourced external data needed."
+
+        # Automatic URL detection & web page reading via BrowserSkill
+        url_match = re.search(r"https?://[^\s\"'>]+", user_message)
+        if url_match:
+            try:
+                from .skills.browser_skill import BrowserSkill
+                bskill = BrowserSkill()
+                b_res = bskill.execute({"url": url_match.group(0), "max_length": 2500})
+                if b_res.success:
+                    research_context = (
+                        f"[LIVE BROWSED WEB PAGE: {b_res.output.get('title') or b_res.output['host']} ({b_res.output['url']})]\n"
+                        f"{b_res.output['text_content'][:2000]}"
+                    )
+            except Exception:
+                pass
+
+        if not research_context:
+            if research_tier == "LIGHT":
+                research_context = "Verified local context checked."
+            elif research_tier == "DEEP":
+                research_context = "Sourced external data needed."
 
         # =========================================================
         # STEP 5: MAKE THE VERDICT / RESPONSE

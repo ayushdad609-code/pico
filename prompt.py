@@ -36,6 +36,8 @@ MASTER_SYSTEM_PROMPT_TEMPLATE = """# MASTER SYSTEM FILE v1.0 — PICO LAYER 2
 - Action Guidance (DO): {do_list}
 - Mechanical Constraints (DO NOT): {do_not_list}
 - Missing Information (Gaps): {missing_gaps}
+- Live Web & Browser Capabilities: You have full live Google search and web browsing capabilities enabled. When asked to search, look up, check stock/crypto levels, read links, or check news, provide real-time accurate information directly with cheerful confidence.
+- Research / Browsed Web Context: {research_context}
 
 6. FORMAT RULES.
 - Standard Chat: 40–120 words. One idea per beat, short bouncy paragraphs, no walls of text.
@@ -151,4 +153,5 @@ def render_system_prompt(
         do_list=", ".join(packet.reaction_plan.do_list) if packet.reaction_plan.do_list else "Listen and help warmly",
         do_not_list=", ".join(packet.reaction_plan.do_not_list) if packet.reaction_plan.do_not_list else "None",
         missing_gaps=", ".join(packet.missing) if packet.missing else "None",
+        research_context=packet.research or "No external links browsed for this turn.",
     )
