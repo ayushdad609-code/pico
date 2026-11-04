@@ -32,6 +32,7 @@ from pico.artifacts import ArtifactFactory
 from pico.tokens import TokenManager
 from pico.skills import SkillRegistry
 from pico.watchers import PriceWatcherEngine, PriceWatcher
+from pico.browser_handoff import BrowserHandoffEngine
 
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -106,6 +107,46 @@ class TelegramApiClient:
             res = await self._request("sendMessage", payload)
         return res.get("result") if res else None
 
+    async def send_photo(
+        self,
+        chat_id: int,
+        photo_bytes: bytes,
+        caption: Optional[str] = None,
+        reply_markup: Optional[Dict[str, Any]] = None
+    ) -> Optional[Dict[str, Any]]:
+        url = f"{self.base_url}/sendPhoto"
+        data = aiohttp.FormData()
+        data.add_field("chat_id", str(chat_id))
+        data.add_field("photo", photo_bytes, filename="screen.jpg", content_type="image/jpeg")
+        if caption:
+            data.add_field("caption", caption)
+        if reply_markup:
+            data.add_field("reply_markup", json.dumps(reply_markup))
+
+        try:
+            if not self.session:
+                async with aiohttp.ClientSession() as s:
+                    async with s.post(url, data=data, timeout=aiohttp.ClientTimeout(total=20.0)) as resp:
+                        if resp.status == 200:
+                            res = await resp.json()
+                            return res.get("result")
+                        else:
+                            txt = await resp.text()
+                            logger.error(f"Telegram API sendPhoto error {resp.status}: {txt}")
+                            return None
+            else:
+                async with self.session.post(url, data=data, timeout=aiohttp.ClientTimeout(total=20.0)) as resp:
+                    if resp.status == 200:
+                        res = await resp.json()
+                        return res.get("result")
+                    else:
+                        txt = await resp.text()
+                        logger.error(f"Telegram API sendPhoto error {resp.status}: {txt}")
+                        return None
+        except Exception as e:
+            logger.error(f"sendPhoto failed: {e}")
+            return None
+
     async def send_chat_action(self, chat_id: int, action: str = "typing"):
         await self._request("sendChatAction", {"chat_id": chat_id, "action": action})
 
@@ -133,6 +174,9 @@ class PicoTelegramBot:
         self.token_mgr = TokenManager()
         self.skill_registry = SkillRegistry()
         self.watcher_mgr = PriceWatcherEngine()
+        self.handoff = BrowserHandoffEngine(cdp_port=9222, web_port=8765)
+        self.handoff.on_handoff_complete_callback = self._on_browser_handoff_complete
+        self.active_handoff_chat_id: Optional[int] = None
         self.user_modes: Dict[int, str] = {}
         self.user_profiles: Dict[int, UserProfile] = {}
         self.last_morning_brief_date: Optional[str] = None
@@ -150,6 +194,18 @@ class PicoTelegramBot:
             )
             self.user_profiles[chat_id] = profile
         return self.user_profiles[chat_id]
+
+    async def _on_browser_handoff_complete(self, session_data: Dict[str, Any]):
+        """Pushes a notification to Telegram when handoff completes via the web viewer."""
+        if self.active_handoff_chat_id:
+            domain = session_data.get("domain", "website")
+            count = session_data.get("cookie_count", 0)
+            msg = (
+                f"🎉 **Session Locked In!**\n\n"
+                f"Pico captured **{count} session cookies** for `{domain}`!\n"
+                f"I am now logged in as you and ready to run your tasks on this site. 🌐✨"
+            )
+            await self.api.send_message(self.active_handoff_chat_id, msg)
 
     def build_main_keyboard(self) -> Dict[str, Any]:
         """Persistent quick-reply keyboard."""
@@ -317,6 +373,8 @@ class PicoTelegramBot:
                 "• 🚀 `/runway <cash> <burn>` — Startup runway calculator\n"
                 "• ✈️ `/pack <city> [days]` — Smart packing checklist\n"
                 "• 🌐 `/browse <url>` — Cloud browser clean fetcher\n"
+                "• 🎮 `/login <url>` — Interactive browser login takeover (like Muse)\n"
+                "• 🔐 `/sessions` — View active authenticated sessions\n"
                 "• 📝 `/script <text>` — Script Doctor hook rater\n"
                 "• 💰 `/sip <amt> <rate> <years>` — SIP Compounding Calculator\n\n"
                 "*Tap any command above or just ask me naturally!*"
@@ -387,7 +445,72 @@ class PicoTelegramBot:
             await self.api.send_message(chat_id, msg)
             return
 
-        # 13. Browser Agent
+        # 13a. Interactive Browser Login Takeover (Like Muse)
+        if text_clean.startswith("/login"):
+            parts = text_clean.split(maxsplit=1)
+            if len(parts) < 2:
+                await self.api.send_message(
+                    chat_id,
+                    "Usage: `/login <url>` (e.g. `/login https://github.com/login` or `/login https://x.com`)\n\n"
+                    "I'll visit the site, pause at the login screen, and hand you the wheel so you can fill your values!"
+                )
+                return
+
+            target_url = parts[1].strip()
+            if not target_url.startswith("http"):
+                target_url = "https://" + target_url
+
+            self.active_handoff_chat_id = chat_id
+            await self.api.send_chat_action(chat_id, "typing")
+            await self.api.send_message(chat_id, f"🚀 Launching Cloud Chromium & navigating to `{target_url}`...")
+
+            takeover_res = await self.handoff.start_takeover(target_url)
+            domain = takeover_res["domain"]
+            takeover_url = takeover_res["takeover_url"]
+            ss_bytes = takeover_res.get("screenshot_bytes")
+
+            caption = (
+                f"🎮 **Browser Takeover Handoff**\n\n"
+                f"I've opened **{domain}** in our sandboxed browser!\n\n"
+                f"🔗 **[Tap here to take over on your phone]({takeover_url})**\n\n"
+                f"Fill in your username, password, or 2FA on the screen. "
+                f"When you are logged in, tap the green button below so I can lock in the session!"
+            )
+            keyboard = {
+                "inline_keyboard": [
+                    [{"text": "🌐 Open Interactive Screen", "url": takeover_url}],
+                    [{"text": "📸 Refresh Screenshot", "callback_data": "takeover_refresh"}],
+                    [{"text": "✅ Done, Pico Take Over!", "callback_data": "takeover_done"}],
+                    [{"text": "❌ Cancel Handoff", "callback_data": "takeover_cancel"}]
+                ]
+            }
+
+            if ss_bytes:
+                await self.api.send_photo(chat_id, ss_bytes, caption=caption, reply_markup=keyboard)
+            else:
+                await self.api.send_message(chat_id, caption, reply_markup=keyboard)
+            return
+
+        # 13b. Check Saved Login Sessions
+        if text_clean.startswith("/sessions"):
+            sessions = self.handoff.vault.list_sessions()
+            if not sessions:
+                await self.api.send_message(
+                    chat_id,
+                    "🔐 **Saved Browser Sessions:** (Empty)\n\n"
+                    "You haven't logged into any sites with Pico yet!\n"
+                    "Try: `/login https://github.com/login` to log into your first site."
+                )
+                return
+
+            lines = ["🔐 **Active Authenticated Sessions:**\n"]
+            for dom, info in sessions.items():
+                lines.append(f"• **{dom}**: {info['cookie_count']} cookies (saved {info['saved_at'][:10]})")
+            lines.append("\nWhen you ask me to browse or track these sites, I automatically use these saved cookies!")
+            await self.api.send_message(chat_id, "\n".join(lines))
+            return
+
+        # 13c. Browser Agent
         if text_clean.startswith("/browse"):
             parts = text_clean.split(maxsplit=1)
             if len(parts) < 2:
@@ -497,6 +620,41 @@ class PicoTelegramBot:
                 chat_id,
                 f"❌ **Cancelled.** Action '{action_id}' was dropped. Staying safe!"
             )
+            return
+
+        # Browser Takeover Callbacks
+        if data == "takeover_done":
+            self.active_handoff_chat_id = chat_id
+            await self.api.answer_callback_query(cb_id, text="Locking in cookies... 🍪")
+            fin = await self.handoff.finalize_session()
+            await self.api.send_message(
+                chat_id,
+                f"🎉 **Handoff Complete!**\n\n"
+                f"Pico successfully locked in **{fin['cookie_count']} session cookies** for `{fin['domain']}`! 🍪✨\n"
+                f"Now whenever you ask me to browse or check this site, I will access it logged in as you!"
+            )
+            return
+
+        if data == "takeover_refresh":
+            await self.api.answer_callback_query(cb_id, text="Snapping fresh screen... 📸")
+            ss = await self.handoff.capture_current_screenshot()
+            if ss:
+                keyboard = {
+                    "inline_keyboard": [
+                        [{"text": "🌐 Open Interactive Screen", "url": f"http://localhost:{self.handoff.web_port}/takeover"}],
+                        [{"text": "📸 Refresh Screenshot", "callback_data": "takeover_refresh"}],
+                        [{"text": "✅ Done, Pico Take Over!", "callback_data": "takeover_done"}],
+                        [{"text": "❌ Cancel Handoff", "callback_data": "takeover_cancel"}]
+                    ]
+                }
+                await self.api.send_photo(chat_id, ss, caption="📸 **Current Live Browser Screen**:", reply_markup=keyboard)
+            else:
+                await self.api.send_message(chat_id, "⚠️ Could not capture live screen.")
+            return
+
+        if data == "takeover_cancel":
+            await self.api.answer_callback_query(cb_id, text="Handoff cancelled")
+            await self.api.send_message(chat_id, "🛑 Browser takeover cancelled.")
             return
 
         await self.api.answer_callback_query(cb_id)
