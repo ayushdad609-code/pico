@@ -33,6 +33,7 @@ from pico.tokens import TokenManager
 from pico.skills import SkillRegistry
 from pico.watchers import PriceWatcherEngine, PriceWatcher
 from pico.browser_handoff import BrowserHandoffEngine
+from pico.device import DeviceProfiler
 
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -375,6 +376,7 @@ class PicoTelegramBot:
                 "• 🌐 `/browse <url>` — Cloud browser clean fetcher\n"
                 "• 🎮 `/login <url>` — Interactive browser login takeover (like Muse)\n"
                 "• 🔐 `/sessions` — View active authenticated sessions\n"
+                "• 📱 `/device` — Phone hardware diagnostics & tier\n"
                 "• 📝 `/script <text>` — Script Doctor hook rater\n"
                 "• 💰 `/sip <amt> <rate> <years>` — SIP Compounding Calculator\n\n"
                 "*Tap any command above or just ask me naturally!*"
@@ -469,6 +471,16 @@ class PicoTelegramBot:
             await self.api.send_message(chat_id, f"🚀 Launching Cloud Chromium & navigating to `{target_url}`...")
 
             takeover_res = await self.handoff.start_takeover(target_url)
+            if not takeover_res.get("success"):
+                err_msg = takeover_res.get("error", "Could not start browser")
+                await self.api.send_message(
+                    chat_id,
+                    f"🛡️ **Hardware Protection Gate Active**\n\n"
+                    f"{err_msg}\n\n"
+                    f"Pico will use clean cloud browsing instead so your device stays fast and battery-safe! 🔋✨"
+                )
+                return
+
             domain = takeover_res["domain"]
             takeover_url = takeover_res["takeover_url"]
             ss_bytes = takeover_res.get("screenshot_bytes")
@@ -516,7 +528,13 @@ class PicoTelegramBot:
             await self.api.send_message(chat_id, "\n".join(lines))
             return
 
-        # 13c. Browser Agent
+        # 13c. Hardware Diagnostics & Device Architecture
+        if text_clean in ["/device", "/hardware", "📱 Device Status"]:
+            card = DeviceProfiler.format_diagnostic_card()
+            await self.api.send_message(chat_id, card)
+            return
+
+        # 13d. Browser Agent
         if text_clean.startswith("/browse"):
             parts = text_clean.split(maxsplit=1)
             if len(parts) < 2:

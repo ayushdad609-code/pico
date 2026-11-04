@@ -16,6 +16,7 @@ from typing import Dict, Any, Optional, List, Tuple
 from datetime import datetime, timezone
 import aiohttp
 from aiohttp import web
+from pico.device import DeviceProfiler, DeviceTier
 
 logger = logging.getLogger("pico.browser_handoff")
 
@@ -549,6 +550,26 @@ class BrowserHandoffEngine:
         self.on_handoff_complete_callback = None
         self.current_domain: str = ""
         self.current_url: str = ""
+        self.last_activity_time: float = time.time()
+        self.idle_timeout_secs: int = 300  # Auto-reap Chromium after 5m of inactivity
+        self.idle_task: Optional[asyncio.Task] = None
+
+    def _touch_activity(self):
+        self.last_activity_time = time.time()
+
+    async def _idle_watchdog_loop(self):
+        """Monitors inactivity and terminates Chromium to conserve RAM & battery."""
+        try:
+            while True:
+                await asyncio.sleep(30)
+                if self.chromium_proc and not self.active_ws_clients:
+                    idle = time.time() - self.last_activity_time
+                    if idle >= self.idle_timeout_secs:
+                        logger.info(f"Reaper: Chromium idle for {int(idle)}s. Closing to save battery and RAM.")
+                        self.close()
+                        break
+        except asyncio.CancelledError:
+            pass
 
     def ensure_chromium_running(self) -> bool:
         """Starts Chromium with remote debugging if not already alive."""
@@ -687,12 +708,30 @@ class BrowserHandoffEngine:
         """
         Navigates to the website, restores any existing cookies,
         and prepares the takeover link for the user.
+        Gated by DeviceProfiler to protect low-end devices.
         """
+        parsed = urllib.parse.urlparse(url)
+        domain = parsed.netloc or parsed.path.split("/")[0]
+
+        # 1. Hardware Tier Gate
+        can_run, reason = DeviceProfiler.can_run_browser()
+        if not can_run:
+            logger.warning(f"Browser takeover gated by DeviceProfiler: {reason}")
+            return {
+                "success": False,
+                "gated": True,
+                "error": reason,
+                "domain": domain,
+                "tier": DeviceProfiler.get_tier().value
+            }
+
+        self._touch_activity()
+        if self.idle_task is None or self.idle_task.done():
+            self.idle_task = asyncio.create_task(self._idle_watchdog_loop())
+
         self.ensure_chromium_running()
         await self.start_web_server()
 
-        parsed = urllib.parse.urlparse(url)
-        domain = parsed.netloc or parsed.path.split("/")[0]
         self.current_domain = domain
         self.current_url = url
 
@@ -746,6 +785,8 @@ class BrowserHandoffEngine:
 
     async def cleanup(self):
         self.is_streaming = False
+        if self.idle_task and not self.idle_task.done():
+            self.idle_task.cancel()
         if self.stream_task:
             self.stream_task.cancel()
         for ws in list(self.active_ws_clients):
