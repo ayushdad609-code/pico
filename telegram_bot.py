@@ -446,18 +446,22 @@ class PicoTelegramBot:
             return
 
         # 13a. Interactive Browser Login Takeover (Like Muse)
-        if text_clean.startswith("/login"):
+        if text_clean in ["/gmail", "/login gmail"]:
+            target_url = "https://accounts.google.com"
+        elif text_clean.startswith("/login"):
             parts = text_clean.split(maxsplit=1)
             if len(parts) < 2:
                 await self.api.send_message(
                     chat_id,
-                    "Usage: `/login <url>` (e.g. `/login https://github.com/login` or `/login https://x.com`)\n\n"
+                    "Usage: `/login <url>` (e.g. `/login gmail`, `/login https://github.com/login`, or `/login https://x.com`)\n\n"
                     "I'll visit the site, pause at the login screen, and hand you the wheel so you can fill your values!"
                 )
                 return
 
             target_url = parts[1].strip()
-            if not target_url.startswith("http"):
+            if target_url.lower() in ["gmail", "google"]:
+                target_url = "https://accounts.google.com"
+            elif not target_url.startswith("http"):
                 target_url = "https://" + target_url
 
             self.active_handoff_chat_id = chat_id
