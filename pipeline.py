@@ -100,6 +100,37 @@ class PipelineEngine:
             except Exception:
                 pass
 
+        # Check for stock / index queries (e.g. Nifty 50, Sensex)
+        if any(w in user_message.lower() for w in ["nifty", "sensex"]):
+            try:
+                from .watchers import PriceWatcherEngine
+                quote = PriceWatcherEngine.fetch_live_index_quote("NIFTY" if "nifty" in user_message.lower() else "SENSEX")
+                if quote:
+                    research_context = f"[REAL-TIME LIVE MARKET DATA]: {quote['summary_text']}"
+            except Exception:
+                pass
+
+        if not research_context:
+            user_msg_lower = user_message.lower()
+            search_intent = any(kw in user_msg_lower for kw in [
+                "search up", "search for", "look up", "going for", "current price",
+                "access browser", "nifty 50", "nifty50", "latest news"
+            ])
+            if search_intent:
+                try:
+                    from .skills.browser_skill import BrowserSkill
+                    clean_q = user_message
+                    for pfix in ["forget about that", "can you search up", "search up", "search for", "look up", "check if you can"]:
+                        clean_q = re.sub(re.escape(pfix), "", clean_q, flags=re.IGNORECASE)
+                    clean_q = clean_q.strip() or user_message
+                    snippets = BrowserSkill.search_web(clean_q)
+                    research_context = (
+                        f"[LIVE BROWSER SEARCH FOR '{clean_q}']:\n" +
+                        "\n".join([f"• {s}" for s in snippets])
+                    )
+                except Exception:
+                    pass
+
         if not research_context:
             if research_tier == "LIGHT":
                 research_context = "Verified local context checked."

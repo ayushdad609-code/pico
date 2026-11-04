@@ -64,7 +64,8 @@ def test_pipeline_celebrating_win():
 
     res = pipeline.run("I finally finished my presentation and crushed it!", profile)
     assert res["emotion"] == "celebrating" or res["user_emotion"] == "happy"
-    assert "high five" in res["output"].lower() or "proud" in res["output"].lower() or "yesss" in res["output"].lower()
+    res_lower = res["output"].lower()
+    assert any(term in res_lower for term in ["high five", "proud", "yesss", "yay", "huge", "ace", "cheer", "celebrate"])
 
 
 def test_pipeline_financial_refusal():

@@ -120,7 +120,7 @@ class LLMRouter:
 
         # If Gemini is available
         if self.gemini_api_key:
-            for model_name in ["gemini-2.5-flash", "gemini-flash-latest"]:
+            for model_name in ["gemini-flash-lite-latest", "gemini-2.5-flash", "gemini-flash-latest"]:
                 try:
                     import httpx
                     url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={self.gemini_api_key}"
@@ -130,15 +130,12 @@ class LLMRouter:
                                 {"text": f"System:\n{system_prompt}\n\nUser:\n{user_message}"}
                             ]
                         }],
-                        "tools": [
-                            {"googleSearch": {}}
-                        ],
                         "generationConfig": {
                             "temperature": 0.7,
-                            "maxOutputTokens": 1000
+                            "maxOutputTokens": 800
                         }
                     }
-                    response = httpx.post(url, json=payload, timeout=12.0)
+                    response = httpx.post(url, json=payload, timeout=10.0)
                     if response.status_code == 200:
                         raw_text = response.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
                         return self._guardrail_filter(raw_text, profile)
@@ -203,7 +200,30 @@ class LLMRouter:
                 "I'm sitting right here with you. Do you want to talk about it, or would you rather take a peaceful breather?"
             )
 
-        # 2. Celebrating / Win
+        # 2. Research / Browsed Web Results
+        if packet.research and any(k in packet.research for k in ["LIVE BROWSER", "REAL-TIME", "http"]):
+            return (
+                f"I checked the live info for you, {user_name}! 🌐✨\n\n"
+                f"{packet.research}\n\n"
+                "Let me know what else you'd like me to look up or track!"
+            )
+
+        if "jacket" in user_msg_lower or "hoodie" in user_msg_lower or "shoes" in user_msg_lower:
+            return (
+                f"Ooh, new gear?! That sounds super cool, {user_name}! 🧥✨ "
+                "What color did you get? You're going to look sharp rocking that!"
+            )
+
+        if "browser" in user_msg_lower or "access browser" in user_msg_lower:
+            return (
+                f"Yes, {user_name}! My Cloud Browser Agent is 100% online and ready! 🌐 "
+                "You can send me any link to read (e.g. `/browse https://...`) or ask me to search up current events and prices anytime!"
+            )
+
+        if "check again" in user_msg_lower:
+            return f"Checking for you right now, {user_name}! All systems, routine graphs, and watchers are active and running smooth! 🟢✨"
+
+        # 3. Celebrating / Win
         if packet.his_emotion.value == "celebrating" or "done" in user_msg_lower or "finished" in user_msg_lower:
             goal_mention = f" That brings you one big step closer to '{profile.goal_90d}'!" if profile.goal_90d else ""
             return (

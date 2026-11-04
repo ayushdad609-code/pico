@@ -600,7 +600,10 @@ class PicoTelegramBot:
                     elif "callback_query" in u:
                         await self.handle_callback_query(u["callback_query"])
 
-                await asyncio.sleep(0.1)
+                if not updates:
+                    await asyncio.sleep(0.5)
+                else:
+                    await asyncio.sleep(0.1)
 
         except asyncio.CancelledError:
             pass
@@ -613,6 +616,21 @@ class PicoTelegramBot:
 
 def main():
     token = os.getenv("TELEGRAM_BOT_TOKEN")
+    if not token:
+        env_paths = [".env", "pico/.env", "/data/data/com.termux/files/home/pico/.env"]
+        for ep in env_paths:
+            if os.path.exists(ep):
+                try:
+                    with open(ep) as f:
+                        for line in f:
+                            if line.startswith("TELEGRAM_BOT_TOKEN="):
+                                token = line.strip().split("=", 1)[1].strip().strip('"').strip("'")
+                                break
+                    if token:
+                        break
+                except Exception:
+                    pass
+
     if not token and len(sys.argv) > 1 and not sys.argv[1].startswith("-"):
         token = sys.argv[1]
 

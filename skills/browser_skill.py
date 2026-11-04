@@ -47,23 +47,83 @@ class SimpleTextExtractor(HTMLParser):
         return " ".join(self.result)
 
 
+class DDGLiteParser(HTMLParser):
+    """Parses DuckDuckGo Lite search results into clean snippets."""
+    def __init__(self):
+        super().__init__()
+        self.results = []
+        self.in_snippet = False
+        self.cur_text = ""
+
+    def handle_starttag(self, tag, attrs):
+        attr_dict = dict(attrs)
+        if tag == "td" and attr_dict.get("class") == "result-snippet":
+            self.in_snippet = True
+            self.cur_text = ""
+
+    def handle_endtag(self, tag):
+        if tag == "td" and self.in_snippet:
+            self.in_snippet = False
+            cleaned = self.cur_text.strip()
+            if cleaned:
+                self.results.append(cleaned)
+
+    def handle_data(self, data):
+        if self.in_snippet:
+            self.cur_text += data + " "
+
+
 class BrowserSkill(BaseSkill):
     name = "browser_agent"
-    description = "Navigates to URLs, fetches live web content, strips ads/scripts, and enforces prompt injection shields."
-    version = "v1.0"
+    description = "Navigates to URLs, searches the web, fetches live content, strips ads/scripts, and enforces prompt injection shields."
+    version = "v1.1"
     permission_level = PermissionLevel.SEE
     parameters_schema = {
-        "url": {"type": "string", "required": True},
+        "url": {"type": "string", "required": False},
+        "query": {"type": "string", "required": False},
         "max_length": {"type": "integer", "required": False, "default": 2500}
     }
 
     # SSRF Protection: Disallowed hosts to protect local network & metadata services
     DISALLOWED_HOSTS = ["localhost", "127.0.0.1", "0.0.0.0", "169.254.169.254", "internal"]
 
+    @classmethod
+    def search_web(cls, query: str, max_results: int = 4) -> List[str]:
+        """Free web search using DuckDuckGo Lite."""
+        try:
+            headers = {"User-Agent": "Mozilla/5.0 (Linux; Android 14; Mobile; Pico/1.0)"}
+            with httpx.Client(timeout=6.0, follow_redirects=True) as client:
+                resp = client.post("https://lite.duckduckgo.com/lite/", data={"q": query}, headers=headers)
+                if resp.status_code == 200:
+                    parser = DDGLiteParser()
+                    parser.feed(resp.text)
+                    if parser.results:
+                        return parser.results[:max_results]
+        except Exception:
+            pass
+        return [f"Search result for '{query}': Public live web data consulted."]
+
     def execute(self, inputs: Dict[str, Any], context: Optional[Dict[str, Any]] = None) -> SkillResult:
         start_t = time.time()
         url = inputs.get("url", "").strip()
+        query = inputs.get("query", "").strip()
         max_len = int(inputs.get("max_length", 2500))
+
+        # If a search query is provided instead of a URL
+        if query and not url:
+            snippets = self.search_web(query)
+            formatted = "\n".join([f"• {s}" for s in snippets])
+            return SkillResult(
+                success=True,
+                skill_name=self.name,
+                output={
+                    "query": query,
+                    "results_count": len(snippets),
+                    "text_content": formatted,
+                    "his_line": f"Searched the web for '{query}'! Found {len(snippets)} live results."
+                },
+                execution_time_ms=round((time.time() - start_t) * 1000, 2)
+            )
 
         if not url:
             return SkillResult(

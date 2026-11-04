@@ -57,6 +57,38 @@ class PriceWatcherEngine:
         # Fallback benchmark
         return 68500.0 if "BTC" in symbol.upper() else 2500.0
 
+    @staticmethod
+    def fetch_live_index_quote(index_name: str = "NIFTY") -> Optional[Dict[str, Any]]:
+        """Fetches live stock index data (Nifty 50, Sensex) via public financial endpoints."""
+        symbol_map = {
+            "NIFTY": "%5ENSEI",
+            "NIFTY 50": "%5ENSEI",
+            "NIFTY50": "%5ENSEI",
+            "SENSEX": "%5EBSESN"
+        }
+        sym = symbol_map.get(index_name.upper().strip(), "%5ENSEI")
+        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
+        try:
+            with httpx.Client(timeout=5.0) as client:
+                resp = client.get(f"https://query1.finance.yahoo.com/v8/finance/chart/{sym}", headers=headers)
+                if resp.status_code == 200:
+                    data = resp.json()["chart"]["result"][0]["meta"]
+                    curr = float(data.get("regularMarketPrice", 0.0))
+                    prev = float(data.get("chartPreviousClose", 0.0))
+                    chg = curr - prev
+                    pct = (chg / prev) * 100.0 if prev > 0 else 0.0
+                    return {
+                        "symbol": index_name.upper(),
+                        "current_price": curr,
+                        "previous_close": prev,
+                        "change": chg,
+                        "change_percent": pct,
+                        "summary_text": f"{index_name.upper()} is currently trading at {curr:,.2f} ({chg:+.2f}, {pct:+.2f}%) [Previous close: {prev:,.2f}]"
+                    }
+        except Exception:
+            pass
+        return None
+
     def evaluate_watchers(self, current_prices: Optional[Dict[str, float]] = None) -> List[WatcherAlert]:
         """
         Scans all active watchers against live prices and triggers alerts.
