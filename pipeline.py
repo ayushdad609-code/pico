@@ -253,7 +253,7 @@ class PipelineEngine:
         lower = text.lower()
 
         # General personal likes/facts belong to shared core memory
-        fav_match = re.search(r"my favorite\s+([a-z0-9_\s]+)\s+is\s+([a-z0-9_\s]+)", lower)
+        fav_match = re.search(r"my favorite\s+([a-z0-9_\s]+?)\s+is\s+([a-z0-9_\s]+?)(?:\s+now|\.|$)", lower)
         if fav_match:
             category = fav_match.group(1).strip()
             item = fav_match.group(2).strip()

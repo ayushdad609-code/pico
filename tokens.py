@@ -25,6 +25,10 @@ class TokenAccount:
     warning_95_sent: bool = False
 
     @property
+    def used_tokens(self) -> int:
+        return self.tokens_used
+
+    @property
     def tokens_remaining(self) -> int:
         return max(0, self.monthly_allowance - self.tokens_used)
 
@@ -47,6 +51,10 @@ class TokenManager:
         if user_id not in self.accounts:
             self.accounts[user_id] = TokenAccount(user_id=user_id, tier=tier)
         return self.accounts[user_id]
+
+    def get_balance(self, user_id: str) -> TokenAccount:
+        """Convenience alias for get_or_create_account."""
+        return self.get_or_create_account(user_id)
 
     def record_usage(self, user_id: str, tokens: int, is_exempt: bool = False) -> Tuple[TokenAccount, Optional[str]]:
         """

@@ -184,6 +184,11 @@ class MemoryStore:
             missing=missing
         )
 
+    def get_facts(self, user_id: str, mode: str = "chill") -> Dict[str, Any]:
+        """Convenience method returning key-value dict of all facts accessible in this mode."""
+        facts = self.get_facts_for_mode(user_id, mode)
+        return {f.key: f.value for f in facts}
+
     # What-I-Know-About-You API (§9)
     def get_what_i_know(self, user_id: str) -> List[Dict[str, Any]]:
         """Returns every fact with source and status for user inspection/editing."""

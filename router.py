@@ -239,10 +239,17 @@ class LLMRouter:
                 "What level are you keeping an eye on today?"
             )
 
-        if packet.mode == "gym" and ("workout" in user_msg_lower or "squat" in user_msg_lower):
+        if "gym" in user_msg_lower or ("squat" in user_msg_lower or "workout" in user_msg_lower):
             return (
                 f"Gym mode activated! 💪 Proud of you for lacing up your shoes today, {user_name}. "
                 "Tell me what you moved today or send over your reps — I'll record the streak!"
+            )
+
+        if "goal" in user_msg_lower or "90-day" in user_msg_lower or "step 1" in user_msg_lower:
+            goal_target = f"'{profile.goal_90d}'" if profile.goal_90d else "our big project"
+            return (
+                f"Hi {user_name}! 👋 We are keeping our eyes locked on our 90-day goal: {goal_target}! "
+                "Every tiny step counts—you've totally got this and I'm cheering you on! 🌟"
             )
 
         # 4. Standard Childish & Kind conversational reply
