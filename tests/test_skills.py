@@ -133,8 +133,10 @@ def test_skill_creator_and_registry_integration():
     registry = SkillRegistry()
     creator = SkillCreator(registry)
 
-    # All 9 default skills are loaded (including browser_agent)
-    assert len(registry.skills) == 9
+    # Default built-in skills loaded (including browser_skill and device_skill)
+    initial_count = len(registry.skills)
+    assert initial_count >= 9
+    assert "device_skill" in registry.skills
 
     # Dynamic creation test
     def hydration_calc(inputs):
@@ -148,7 +150,7 @@ def test_skill_creator_and_registry_integration():
     )
     ok, msg, _ = creator.create_and_register_skill(spec, dry_run_input={"weight_kg": 70})
     assert ok is True
-    assert len(registry.skills) == 10
+    assert len(registry.skills) == initial_count + 1
 
 
 def test_browser_skill_clean_fetch():

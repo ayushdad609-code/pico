@@ -200,10 +200,11 @@ class LLMRouter:
                 "I'm sitting right here with you. Do you want to talk about it, or would you rather take a peaceful breather?"
             )
 
-        # 2. Research / Browsed Web Results
-        if packet.research and any(k in packet.research for k in ["LIVE BROWSER", "REAL-TIME", "http"]):
+        # 2. Research / Browsed Web Results / Live Device Context
+        if packet.research and any(k in packet.research for k in ["LIVE BROWSER", "REAL-TIME", "VERIFIED DEVICE", "DEVICE APP", "http"]):
+            icon = "📱" if "DEVICE" in packet.research else "🌐"
             return (
-                f"I checked the live info for you, {user_name}! 🌐✨\n\n"
+                f"I checked the live info for you, {user_name}! {icon}✨\n\n"
                 f"{packet.research}\n\n"
                 "Let me know what else you'd like me to look up or track!"
             )

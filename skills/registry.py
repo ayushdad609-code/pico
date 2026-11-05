@@ -14,6 +14,7 @@ from .level_calculator import LevelCalculatorSkill
 from .runway_calculator import RunwayCalculatorSkill
 from .packing_checklist import PackingChecklistSkill
 from .browser_skill import BrowserSkill
+from .device_skill import DeviceSkill
 
 
 class SkillRegistry:
@@ -40,6 +41,8 @@ class SkillRegistry:
         self.register_skill(PackingChecklistSkill())
         # 9. Cloud Browser Agent (Hand #2)
         self.register_skill(BrowserSkill())
+        # 10. Android Hardware & Device Sensors
+        self.register_skill(DeviceSkill())
 
     def register_skill(self, skill: BaseSkill):
         self.skills[skill.name] = skill

@@ -110,6 +110,42 @@ class PipelineEngine:
             except Exception:
                 pass
 
+        # Check for device hardware / sensor queries
+        if any(w in user_message.lower() for w in ["battery", "storage", "disk space", "ram", "specs", "device info", "how much memory", "free space", "phone info", "my device"]):
+            try:
+                from .skills.device_skill import DeviceSkill
+                dskill = DeviceSkill()
+                lower_msg = user_message.lower()
+                if "battery" in lower_msg:
+                    d_res = dskill.execute({"action": "battery"})
+                elif any(w in lower_msg for w in ["storage", "disk", "free space"]):
+                    d_res = dskill.execute({"action": "storage"})
+                elif any(w in lower_msg for w in ["specs", "hardware", "ram", "cpu", "memory"]):
+                    d_res = dskill.execute({"action": "specs"})
+                else:
+                    d_res = dskill.execute({"action": "status"})
+
+                if d_res.success:
+                    device_text = d_res.output.get("status_text") or d_res.output.get("summary_text")
+                    d_context = f"[VERIFIED DEVICE HARDWARE CONTEXT]: {device_text}"
+                    research_context = f"{research_context}\n{d_context}" if research_context else d_context
+            except Exception:
+                pass
+
+        # Check for app launching intent
+        app_match = re.search(r"\b(?:launch|open)\s+(spotify|youtube|tradingview|chrome|settings|calculator|clock)\b", user_message.lower())
+        if app_match:
+            try:
+                from .skills.device_skill import DeviceSkill
+                app_name = app_match.group(1).lower()
+                dskill = DeviceSkill()
+                d_res = dskill.execute({"action": "launch_app", "app_name": app_name})
+                if d_res.success:
+                    app_context = f"[DEVICE APP LAUNCH]: {d_res.output.get('status_text')}"
+                    research_context = f"{research_context}\n{app_context}" if research_context else app_context
+            except Exception:
+                pass
+
         if not research_context:
             user_msg_lower = user_message.lower()
             search_intent = any(kw in user_msg_lower for kw in [

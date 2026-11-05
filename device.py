@@ -115,6 +115,7 @@ class DeviceProfiler:
     @classmethod
     def inspect(cls, force_refresh: bool = False) -> DeviceInfo:
         """Inspects hardware and returns classified DeviceInfo."""
+        """Inspects hardware and returns classified DeviceInfo."""
         if cls._cached_info and not force_refresh:
             return cls._cached_info
 
@@ -177,6 +178,10 @@ class DeviceProfiler:
     @classmethod
     def get_tier(cls) -> DeviceTier:
         return cls.inspect().tier
+
+    @classmethod
+    def get_stats(cls) -> DeviceInfo:
+        return cls.inspect()
 
     @classmethod
     def can_run_browser(cls) -> tuple[bool, str]:
