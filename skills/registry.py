@@ -3,6 +3,8 @@ Skill Registry for Pico.
 Manages built-in and dynamically created skills.
 """
 
+import os
+import glob
 from typing import Dict, Any, List, Optional
 from .base_skill import BaseSkill, SkillResult
 from .script_doctor import ScriptDoctorSkill
@@ -26,9 +28,18 @@ from .coding_tools import (
 
 
 class SkillRegistry:
+    _shared_instance: Optional["SkillRegistry"] = None
+
     def __init__(self):
         self.skills: Dict[str, BaseSkill] = {}
         self._register_default_skills()
+        SkillRegistry._shared_instance = self
+
+    @classmethod
+    def get_shared_instance(cls) -> "SkillRegistry":
+        if cls._shared_instance is None:
+            cls._shared_instance = SkillRegistry()
+        return cls._shared_instance
 
     def _register_default_skills(self):
         # 1. Content Creation
@@ -58,9 +69,40 @@ class SkillRegistry:
         self.register_skill(RunBashCommandSkill())
         self.register_skill(ListDirSkill())
         self.register_skill(GrepSearchSkill())
+        # 17. Hermes Skill Self-Improvement Engine (6 actions)
+        from .skill_manage import SkillManageSkill
+        self.register_skill(SkillManageSkill(registry=self))
+        # 18. Load any custom skills from disk
+        self.load_custom_skills()
+
+    def load_custom_skills(self, custom_dir: Optional[str] = None):
+        """Scans custom skills directory and registers all active custom skills."""
+        from .skill_manage import SkillManageSkill, CUSTOM_SKILLS_DIR
+        target_dir = custom_dir or CUSTOM_SKILLS_DIR
+        if not os.path.exists(target_dir):
+            return
+
+        for filepath in glob.glob(os.path.join(target_dir, "*.py")):
+            basename = os.path.basename(filepath)
+            if basename.startswith("__") or basename.endswith(".bak"):
+                continue
+            skill_name = basename[:-3]
+            try:
+                skill = SkillManageSkill.load_skill_from_file(filepath, skill_name)
+                if skill:
+                    self.register_skill(skill)
+            except Exception:
+                pass
 
     def register_skill(self, skill: BaseSkill):
         self.skills[skill.name] = skill
+
+    def unregister_skill(self, name: str) -> bool:
+        """Removes a skill from active registry."""
+        if name in self.skills:
+            del self.skills[name]
+            return True
+        return False
 
     def get_skill(self, name: str) -> Optional[BaseSkill]:
         return self.skills.get(name)

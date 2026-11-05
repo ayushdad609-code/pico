@@ -23,6 +23,8 @@ from .examiner import EmotionExaminer
 from .guardrails import check_input_shield, validate_output_policy, format_safe_fallback
 from .prompt import render_system_prompt
 from .router import LLMRouter
+from .hermes_memory import HermesMemoryCoordinator
+from .hermes_curator import HermesMemoryCurator
 
 
 class PipelineEngine:
@@ -30,6 +32,8 @@ class PipelineEngine:
         self.memory = memory_store
         self.examiner = EmotionExaminer()
         self.router = router or LLMRouter()
+        self.hermes_memory = HermesMemoryCoordinator(memory_store)
+        self.hermes_curator = HermesMemoryCurator(self.hermes_memory, memory_store)
         self.run_history: list = []
 
     def run(
@@ -167,6 +171,15 @@ class PipelineEngine:
                 except Exception:
                     pass
 
+        # Layer 2: SQLite FTS5 Cross-Session Recall
+        past_matches = self.hermes_memory.search_cross_session(profile.user_id, user_message, limit=2)
+        if past_matches:
+            cross_bridge = self.hermes_memory.summarize_past_context(past_matches)
+            if research_context and research_context != "Verified local context checked.":
+                research_context = f"{cross_bridge}\n\n{research_context}"
+            else:
+                research_context = cross_bridge
+
         if not research_context:
             if research_tier == "LIGHT":
                 research_context = "Verified local context checked."
@@ -220,8 +233,15 @@ class PipelineEngine:
         final_output = raw_output if is_valid else format_safe_fallback(raw_output, violations)
 
         # =========================================================
-        # STEP 6: LEARN & AUDIT LOG
+        # STEP 6: LEARN & AUDIT LOG (with Hermes Reflection)
         # =========================================================
+        curation = self.hermes_curator.reflect_and_curate(
+            user_id=profile.user_id,
+            prompt=user_message,
+            agent_response=final_output,
+            session_id=run_id
+        )
+
         run_record = {
             "run_id": run_id,
             "timestamp": started_at,
@@ -232,7 +252,7 @@ class PipelineEngine:
             "output": final_output,
             "pico_emotion": pico_emotion.value,
             "user_emotion": user_emotion.primary,
-            "facts_extracted": len(extracted_facts),
+            "facts_extracted": len(extracted_facts) + curation.get("facts_extracted", 0),
             "guardrail_violations": violations,
             "tokens_estimated": len(system_prompt.split()) + len(user_message.split()) + len(final_output.split())
         }
@@ -246,7 +266,9 @@ class PipelineEngine:
             "emotion": pico_emotion.value,
             "user_emotion": user_emotion.primary,
             "facts_saved": [f.key for f in extracted_facts],
-            "memory_pack_size": len(memory_pack.committed_facts) + len(memory_pack.staging_facts)
+            "memory_pack_size": len(memory_pack.committed_facts) + len(memory_pack.staging_facts),
+            "pico_nudge": curation.get("nudge"),
+            "dialectic_synthesis": curation.get("dialectic_synthesis")
         }
 
     def _detect_topic_mode(self, text: str, profile: UserProfile) -> str:

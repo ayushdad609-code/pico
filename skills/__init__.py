@@ -23,6 +23,7 @@ from .coding_tools import (
     ListDirSkill,
     GrepSearchSkill
 )
+from .skill_manage import SkillManageSkill
 
 __all__ = [
     "BaseSkill",
@@ -47,4 +48,5 @@ __all__ = [
     "RunBashCommandSkill",
     "ListDirSkill",
     "GrepSearchSkill",
+    "SkillManageSkill",
 ]

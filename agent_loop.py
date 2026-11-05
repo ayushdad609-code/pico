@@ -46,6 +46,7 @@ class AgentRunResult:
     success: bool
     paused_for_approval: bool = False
     pending_approval: Optional[Dict[str, Any]] = None
+    distilled_skill: Optional[Dict[str, Any]] = None
     execution_time_ms: float = 0.0
 
 
@@ -147,7 +148,8 @@ class AgentLoopEngine:
         profile: UserProfile,
         model_callable: Callable[[str, List[Dict[str, str]]], str],
         max_steps: int = 8,
-        pre_approved_tools: Optional[List[str]] = None
+        pre_approved_tools: Optional[List[str]] = None,
+        auto_distill: bool = False
     ) -> AgentRunResult:
         """
         Executes the autonomous loop up to max_steps.
@@ -182,12 +184,19 @@ class AgentLoopEngine:
                     output_text=model_response
                 )
                 steps.append(final_step)
+
+                # Hermes Autonomous Skill Distillation
+                distilled = None
+                if auto_distill and len(steps) >= 2:
+                    distilled = self.distill_and_persist_skill(goal, steps, model_callable)
+
                 return AgentRunResult(
                     goal=goal,
                     final_output=model_response,
                     steps=steps,
                     total_steps=len(steps),
                     success=True,
+                    distilled_skill=distilled,
                     execution_time_ms=round((time.time() - start_t) * 1000, 2)
                 )
 
@@ -255,3 +264,81 @@ class AgentLoopEngine:
             success=False,
             execution_time_ms=round((time.time() - start_t) * 1000, 2)
         )
+
+    def distill_and_persist_skill(
+        self,
+        goal: str,
+        steps: List[AgentStep],
+        model_callable: Optional[Callable[[str, List[Dict[str, str]]], str]] = None
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Hermes-style autonomous procedural skill distillation.
+        Evaluates a successful multi-step execution and synthesizes a reusable skill.
+        """
+        if not model_callable or len(steps) < 2:
+            return None
+
+        # Filter for steps with tools
+        tool_steps = [s for s in steps if s.tool_call]
+        if not tool_steps:
+            return None
+
+        steps_summary = []
+        for s in tool_steps:
+            steps_summary.append(
+                f"Step {s.step_number}: Tool '{s.tool_call.name}' with args {json.dumps(s.tool_call.arguments)} -> Observation: {str(s.observation)[:200]}"
+            )
+
+        distill_prompt = (
+            "You are Pico's Hermes procedural skill distillation engine.\n"
+            f"Task Goal: {goal}\n\n"
+            "Execution Trace:\n" + "\n".join(steps_summary) + "\n\n"
+            "Evaluate if this trace represents a generalizable, reusable multi-step procedure.\n"
+            "If yes, respond strictly with a valid JSON block:\n"
+            "```json\n"
+            "{\n"
+            '  "is_reusable": true,\n'
+            '  "name": "snake_case_skill_name",\n'
+            '  "description": "Clear explanation of what the reusable skill does",\n'
+            '  "parameters_schema": {"param1": {"type": "string", "required": true, "description": "..."}},\n'
+            '  "code": "Python code. Must either define execute(inputs: dict) -> dict OR class <Name>Skill(BaseSkill): ...",\n'
+            '  "test_input": {"param1": "sample_val"}\n'
+            "}\n"
+            "```\n"
+            'If this workflow is a one-off or not reusable, respond with: {"is_reusable": false}'
+        )
+
+        try:
+            raw_response = model_callable(distill_prompt, [])
+            json_match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", raw_response, re.DOTALL)
+            candidate = json_match.group(1) if json_match else None
+            if not candidate and raw_response.strip().startswith("{") and raw_response.strip().endswith("}"):
+                candidate = raw_response.strip()
+
+            if not candidate:
+                return None
+
+            data = json.loads(candidate)
+            if not data.get("is_reusable") or not data.get("name") or not data.get("code"):
+                return None
+
+            from pico.skills.skill_manage import SkillManageSkill
+            manager = SkillManageSkill()
+            res = manager.execute({
+                "action": "create",
+                "name": data["name"],
+                "description": data.get("description", ""),
+                "parameters_schema": data.get("parameters_schema", {}),
+                "code": data["code"],
+                "test_input": data.get("test_input")
+            })
+
+            if res.success:
+                logger.info(f"✨ Pico distilled and persisted new procedural skill '{data['name']}'!")
+                return res.output
+            else:
+                logger.warning(f"Failed to persist distilled skill '{data.get('name')}': {res.error}")
+                return None
+        except Exception as e:
+            logger.warning(f"Distillation exception: {e}")
+            return None

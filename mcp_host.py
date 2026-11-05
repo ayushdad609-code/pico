@@ -114,6 +114,13 @@ class MCPHost:
             description="Execute shell command in Termux workspace",
             permission_level=PermissionLevel.ASK
         )
+        # Hermes procedural skill self-improvement engine
+        self.register_tool(
+            server_name="hermes_skills",
+            name="skill_manage",
+            description="Hermes skill self-improvement engine. 6 actions: create, read, update, test, rollback, deprecate.",
+            permission_level=PermissionLevel.ASK
+        )
 
     def register_tool(
         self,
@@ -260,6 +267,12 @@ class MCPHost:
             from pico.skills.coding_tools import GrepSearchSkill
             res = GrepSearchSkill().execute(arguments)
             return res.output.get("matches", "") if res.success else f"Error: {res.error}"
+
+        if tool_name == "skill_manage":
+            import json as _json
+            from pico.skills.skill_manage import SkillManageSkill
+            res = SkillManageSkill().execute(arguments)
+            return _json.dumps(res.output) if res.success else f"Error: {res.error}"
 
         return f"Tool '{tool_name}' executed with arguments {arguments}."
 
