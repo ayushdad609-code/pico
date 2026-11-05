@@ -386,9 +386,23 @@ class PicoTelegramBot:
                 "• 🔋 `/battery` — Real-time battery & charging health\n"
                 "• 🚀 `/launch <app>` — Open phone apps (spotify, youtube, etc.)\n"
                 "• 📝 `/script <text>` — Script Doctor hook rater\n"
-                "• 💰 `/sip <amt> <rate> <years>` — SIP Compounding Calculator\n\n"
-                "*Tap any command above or just ask me naturally!*"
+                "• 💰 `/sip <amt> <rate> <years>` — SIP Compounding Calculator\n"
+                "• 🛠️ `/agent <task>` — Autonomous multi-step problem solver\n"
             )
+
+            # Check for dynamically synthesized Hermes skills
+            from pico.skills.skill_manage import CUSTOM_SKILLS_DIR
+            if os.path.exists(CUSTOM_SKILLS_DIR):
+                custom_skills = [
+                    f[:-3] for f in os.listdir(CUSTOM_SKILLS_DIR)
+                    if f.endswith(".py") and not f.startswith("__")
+                ]
+                if custom_skills:
+                    msg += "\n🧠 **Evolved Custom Skills (Hermes Self-Learned):**\n"
+                    for cs in custom_skills:
+                        msg += f"• 🔮 `{cs}` (Synthesized by Pico)\n"
+
+            msg += "\n*Tap any command above or tell me what to build!*"
             await self.api.send_message(chat_id, msg)
             return
 
@@ -631,12 +645,14 @@ class PicoTelegramBot:
             loop = asyncio.get_running_loop()
             result = await loop.run_in_executor(
                 None,
-                self.agent_loop.run_loop,
-                task_goal,
-                profile,
-                self.pipeline.router.generate_raw,
-                8,
-                ["read_file", "list_dir", "grep_search"]
+                lambda: self.agent_loop.run_loop(
+                    goal=task_goal,
+                    profile=profile,
+                    model_callable=self.pipeline.router.generate_raw,
+                    max_steps=8,
+                    pre_approved_tools=["read_file", "list_dir", "grep_search"],
+                    auto_distill=True
+                )
             )
 
             if result.paused_for_approval and result.pending_approval:
@@ -680,6 +696,14 @@ class PicoTelegramBot:
                 f"{result.final_output}\n\n"
                 f"⚙️ **Audit Trail:**\n{tools_summary}"
             )
+            if result.distilled_skill:
+                skill_info = result.distilled_skill
+                s_name = skill_info.get("name", "custom_skill")
+                reply += (
+                    f"\n\n🧠 **Hermes Autonomous Skill Distilled!**\n"
+                    f"Pico turned this successful multi-step workflow into a reusable skill: `{s_name}` ✨\n"
+                    f"You can now run it anytime or view it in `/skills`!"
+                )
             await self.api.send_message(chat_id, reply)
             return
 
@@ -764,20 +788,39 @@ class PicoTelegramBot:
             loop = asyncio.get_running_loop()
             result = await loop.run_in_executor(
                 None,
-                self.agent_loop.run_loop,
-                goal,
-                profile,
-                self.pipeline.router.generate_raw,
-                8,
-                ["read_file", "list_dir", "grep_search", tool_n]
+                lambda: self.agent_loop.run_loop(
+                    goal=goal,
+                    profile=profile,
+                    model_callable=self.pipeline.router.generate_raw,
+                    max_steps=8,
+                    pre_approved_tools=["read_file", "list_dir", "grep_search", tool_n],
+                    auto_distill=True
+                )
             )
             self.pending_agent_tasks.pop(chat_id, None)
+
+            # Format completed steps summary
+            step_icons = []
+            for s in result.steps:
+                if s.tool_call:
+                    step_icons.append(f"• Step {s.step_number}: `{s.tool_call.name}` -> *{s.thought or 'executed'}*")
+
+            tools_summary = "\n".join(step_icons) if step_icons else "• Direct reasoned answer"
 
             status_icon = "✅" if result.success else "⚠️"
             reply = (
                 f"{status_icon} **Agent Execution Finished:**\n\n"
-                f"{result.final_output}"
+                f"{result.final_output}\n\n"
+                f"⚙️ **Audit Trail:**\n{tools_summary}"
             )
+            if result.distilled_skill:
+                skill_info = result.distilled_skill
+                s_name = skill_info.get("name", "custom_skill")
+                reply += (
+                    f"\n\n🧠 **Hermes Autonomous Skill Distilled!**\n"
+                    f"Pico turned this successful multi-step workflow into a reusable skill: `{s_name}` ✨\n"
+                    f"You can now run it anytime or view it in `/skills`!"
+                )
             await self.api.send_message(chat_id, reply)
             return
 
