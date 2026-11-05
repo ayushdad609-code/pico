@@ -687,13 +687,16 @@ class PicoTelegramBot:
             if ss:
                 keyboard = {
                     "inline_keyboard": [
-                        [{"text": "🌐 Open Interactive Screen", "url": f"http://localhost:{self.handoff.web_port}/takeover"}],
                         [{"text": "📸 Refresh Screenshot", "callback_data": "takeover_refresh"}],
                         [{"text": "✅ Done, Pico Take Over!", "callback_data": "takeover_done"}],
                         [{"text": "❌ Cancel Handoff", "callback_data": "takeover_cancel"}]
                     ]
                 }
-                await self.api.send_photo(chat_id, ss, caption="📸 **Current Live Browser Screen**:", reply_markup=keyboard)
+                caption = (
+                    f"📸 **Current Live Screen for {self.handoff.current_domain}**:\n"
+                    f"👉 Control link: http://localhost:{self.handoff.web_port}/takeover"
+                )
+                await self.api.send_photo(chat_id, ss, caption=caption, reply_markup=keyboard)
             else:
                 await self.api.send_message(chat_id, "⚠️ Could not capture live screen.")
             return
