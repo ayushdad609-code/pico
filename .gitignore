@@ -26,3 +26,7 @@ logs/
 .DS_Store
 .idea/
 .vscode/
+
+# PID & runtime lock files
+*.pid
+
