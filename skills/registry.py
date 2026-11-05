@@ -15,6 +15,14 @@ from .runway_calculator import RunwayCalculatorSkill
 from .packing_checklist import PackingChecklistSkill
 from .browser_skill import BrowserSkill
 from .device_skill import DeviceSkill
+from .coding_tools import (
+    ReadFileSkill,
+    WriteFileSkill,
+    EditFileSkill,
+    RunBashCommandSkill,
+    ListDirSkill,
+    GrepSearchSkill
+)
 
 
 class SkillRegistry:
@@ -43,6 +51,13 @@ class SkillRegistry:
         self.register_skill(BrowserSkill())
         # 10. Android Hardware & Device Sensors
         self.register_skill(DeviceSkill())
+        # 11-16. Claude Code Filesystem & Terminal Primitives
+        self.register_skill(ReadFileSkill())
+        self.register_skill(WriteFileSkill())
+        self.register_skill(EditFileSkill())
+        self.register_skill(RunBashCommandSkill())
+        self.register_skill(ListDirSkill())
+        self.register_skill(GrepSearchSkill())
 
     def register_skill(self, skill: BaseSkill):
         self.skills[skill.name] = skill

@@ -35,6 +35,8 @@ from pico.watchers import PriceWatcherEngine, PriceWatcher
 from pico.browser_handoff import BrowserHandoffEngine
 from pico.device import DeviceProfiler
 from pico.device_sensors import BatterySensor, AppLauncher, ClipboardBridge
+from pico.agent_loop import AgentLoopEngine
+from pico.mcp_host import MCPHost
 
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -178,6 +180,9 @@ class PicoTelegramBot:
         self.watcher_mgr = PriceWatcherEngine()
         self.handoff = BrowserHandoffEngine(cdp_port=9222, web_port=8765)
         self.handoff.on_handoff_complete_callback = self._on_browser_handoff_complete
+        self.mcp_host = MCPHost()
+        self.agent_loop = AgentLoopEngine(self.mcp_host)
+        self.pending_agent_tasks: Dict[int, Dict[str, Any]] = {}
         self.active_handoff_chat_id: Optional[int] = None
         self.user_modes: Dict[int, str] = {}
         self.user_profiles: Dict[int, UserProfile] = {}
@@ -603,6 +608,81 @@ class PicoTelegramBot:
                 except ValueError:
                     pass
 
+        # 14b. Autonomous Multi-Turn Agent Mode (Claude Code-Grade)
+        if text_clean.startswith("/agent") or text_clean.startswith("/code") or text_clean.startswith("/task"):
+            parts = text_clean.split(maxsplit=1)
+            if len(parts) < 2:
+                await self.api.send_message(
+                    chat_id,
+                    "🤖 **Autonomous Agent Mode**\n\n"
+                    "Usage: `/agent <goal>` or `/code <instruction>`\n\n"
+                    "Examples:\n"
+                    "• `/agent check git status and tell me the last commit`\n"
+                    "• `/agent inspect my device storage and memory`\n"
+                    "• `/code create a python script that calculates compound interest`\n\n"
+                    "Pico will autonomously inspect files, run commands, and solve the task step-by-step!"
+                )
+                return
+
+            task_goal = parts[1].strip()
+            await self.api.send_chat_action(chat_id, "typing")
+            await self.api.send_message(chat_id, f"🚀 **Agent Activated!** Pico is working on: *\"{task_goal}\"*...")
+
+            loop = asyncio.get_running_loop()
+            result = await loop.run_in_executor(
+                None,
+                self.agent_loop.run_loop,
+                task_goal,
+                profile,
+                self.pipeline.router.generate_raw,
+                8,
+                ["read_file", "list_dir", "grep_search"]
+            )
+
+            if result.paused_for_approval and result.pending_approval:
+                self.pending_agent_tasks[chat_id] = {
+                    "goal": task_goal,
+                    "profile": profile,
+                    "tool_name": result.pending_approval.get("tool_name"),
+                    "arguments": result.pending_approval.get("arguments", {})
+                }
+                tool_n = result.pending_approval.get("tool_name")
+                args_preview = json.dumps(result.pending_approval.get("arguments", {}), indent=2)
+                approval_keyboard = {
+                    "inline_keyboard": [
+                        [
+                            {"text": f"✅ Approve {tool_n}", "callback_data": f"agent_approve_{tool_n}"},
+                            {"text": "❌ Reject", "callback_data": "agent_reject"}
+                        ]
+                    ]
+                }
+                await self.api.send_message(
+                    chat_id,
+                    f"🛡️ **Permission Approval Card Required**\n\n"
+                    f"Pico needs permission to run tool: `{tool_n}`\n"
+                    f"**Arguments:**\n```json\n{args_preview[:500]}\n```\n\n"
+                    f"Would you like me to execute this action?",
+                    reply_markup=approval_keyboard
+                )
+                return
+
+            # Format completed steps summary
+            step_icons = []
+            for s in result.steps:
+                if s.tool_call:
+                    step_icons.append(f"• Step {s.step_number}: `{s.tool_call.name}` -> *{s.thought or 'executed'}*")
+
+            tools_summary = "\n".join(step_icons) if step_icons else "• Direct reasoned answer"
+
+            status_icon = "✅" if result.success else "⚠️"
+            reply = (
+                f"{status_icon} **Agent Execution Completed** ({result.total_steps} steps in {result.execution_time_ms:.0f}ms):\n\n"
+                f"{result.final_output}\n\n"
+                f"⚙️ **Audit Trail:**\n{tools_summary}"
+            )
+            await self.api.send_message(chat_id, reply)
+            return
+
         # 15. Default: Run Full 7-Step Pipeline
         res = self.pipeline.run(
             user_message=text_clean,
@@ -666,6 +746,45 @@ class PicoTelegramBot:
                 chat_id,
                 f"❌ **Cancelled.** Action '{action_id}' was dropped. Staying safe!"
             )
+            return
+
+        # Autonomous Agent Loop Approval callbacks
+        if data.startswith("agent_approve_"):
+            pending = self.pending_agent_tasks.get(chat_id)
+            if not pending:
+                await self.api.answer_callback_query(cb_id, text="No pending task found.")
+                return
+
+            tool_n = pending["tool_name"]
+            goal = pending["goal"]
+            profile = pending["profile"]
+            await self.api.answer_callback_query(cb_id, text=f"Approved {tool_n}! ⚡")
+            await self.api.send_message(chat_id, f"⚡ Approval granted for `{tool_n}`! Resuming agent loop...")
+
+            loop = asyncio.get_running_loop()
+            result = await loop.run_in_executor(
+                None,
+                self.agent_loop.run_loop,
+                goal,
+                profile,
+                self.pipeline.router.generate_raw,
+                8,
+                ["read_file", "list_dir", "grep_search", tool_n]
+            )
+            self.pending_agent_tasks.pop(chat_id, None)
+
+            status_icon = "✅" if result.success else "⚠️"
+            reply = (
+                f"{status_icon} **Agent Execution Finished:**\n\n"
+                f"{result.final_output}"
+            )
+            await self.api.send_message(chat_id, reply)
+            return
+
+        if data == "agent_reject":
+            self.pending_agent_tasks.pop(chat_id, None)
+            await self.api.answer_callback_query(cb_id, text="Action rejected.")
+            await self.api.send_message(chat_id, "🛑 Action rejected. Agent loop cancelled safely.")
             return
 
         # Browser Takeover Callbacks

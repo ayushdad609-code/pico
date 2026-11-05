@@ -15,6 +15,14 @@ from .runway_calculator import RunwayCalculatorSkill
 from .packing_checklist import PackingChecklistSkill
 from .browser_skill import BrowserSkill
 from .device_skill import DeviceSkill
+from .coding_tools import (
+    ReadFileSkill,
+    WriteFileSkill,
+    EditFileSkill,
+    RunBashCommandSkill,
+    ListDirSkill,
+    GrepSearchSkill
+)
 
 __all__ = [
     "BaseSkill",
@@ -33,4 +41,10 @@ __all__ = [
     "PackingChecklistSkill",
     "BrowserSkill",
     "DeviceSkill",
+    "ReadFileSkill",
+    "WriteFileSkill",
+    "EditFileSkill",
+    "RunBashCommandSkill",
+    "ListDirSkill",
+    "GrepSearchSkill",
 ]

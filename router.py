@@ -13,26 +13,29 @@ from .models import UserProfile, EmotionSensitivity, PersonaPacket
 
 class LLMRouter:
     def __init__(self):
+        self.anthropic_api_key = os.getenv("ANTHROPIC_API_KEY")
+        self.openai_api_key = os.getenv("OPENAI_API_KEY")
         self.groq_api_key = os.getenv("GROQ_API_KEY")
         self.gemini_api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
         self.litellm_url = os.getenv("LITELLM_URL", "http://localhost:4000")
 
         # Fallback to load from .env files if not in environment
-        if not (self.gemini_api_key or self.groq_api_key):
-            for path in [".env", "pico/.env", "/data/data/com.termux/files/home/pico/.env", "/data/data/com.termux/files/home/supoclip/.env"]:
-                if os.path.exists(path):
-                    try:
-                        with open(path) as f:
-                            for line in f:
-                                line = line.strip()
-                                if line.startswith("GOOGLE_API_KEY=") or line.startswith("GEMINI_API_KEY="):
-                                    self.gemini_api_key = line.split("=", 1)[1].strip().strip('"').strip("'")
-                                elif line.startswith("GROQ_API_KEY="):
-                                    self.groq_api_key = line.split("=", 1)[1].strip().strip('"').strip("'")
-                        if self.gemini_api_key or self.groq_api_key:
-                            break
-                    except Exception:
-                        pass
+        for path in [".env", "pico/.env", "/data/data/com.termux/files/home/pico/.env", "/data/data/com.termux/files/home/supoclip/.env"]:
+            if os.path.exists(path):
+                try:
+                    with open(path) as f:
+                        for line in f:
+                            line = line.strip()
+                            if line.startswith("ANTHROPIC_API_KEY="):
+                                self.anthropic_api_key = self.anthropic_api_key or line.split("=", 1)[1].strip().strip('"').strip("'")
+                            elif line.startswith("OPENAI_API_KEY="):
+                                self.openai_api_key = self.openai_api_key or line.split("=", 1)[1].strip().strip('"').strip("'")
+                            elif line.startswith("GOOGLE_API_KEY=") or line.startswith("GEMINI_API_KEY="):
+                                self.gemini_api_key = self.gemini_api_key or line.split("=", 1)[1].strip().strip('"').strip("'")
+                            elif line.startswith("GROQ_API_KEY="):
+                                self.groq_api_key = self.groq_api_key or line.split("=", 1)[1].strip().strip('"').strip("'")
+                except Exception:
+                    pass
 
     def route_and_generate(
         self,
@@ -91,7 +94,54 @@ class LLMRouter:
         # Enforce §5 Privacy Rule: Never send memory packs to free Gemini
         has_personal_context = bool(packet.memory_pack.committed_facts or packet.memory_pack.staging_facts)
 
-        # If Groq is available, we can call it (Groq does not train on API requests by default)
+        # 1. If Anthropic Claude is available (Claude 3.5 / 3.7 Sonnet)
+        if self.anthropic_api_key:
+            try:
+                import httpx
+                headers = {
+                    "x-api-key": self.anthropic_api_key,
+                    "anthropic-version": "2023-06-01",
+                    "content-type": "application/json"
+                }
+                payload = {
+                    "model": "claude-3-5-sonnet-20241022",
+                    "max_tokens": 1024,
+                    "system": system_prompt,
+                    "messages": [{"role": "user", "content": user_message}]
+                }
+                response = httpx.post("https://api.anthropic.com/v1/messages", headers=headers, json=payload, timeout=15.0)
+                if response.status_code == 200:
+                    raw_text = response.json()["content"][0]["text"].strip()
+                    if raw_text and len(raw_text) > 10:
+                        return self._guardrail_filter(raw_text, profile)
+            except Exception:
+                pass
+
+        # 2. If OpenAI GPT-4o is available
+        if self.openai_api_key:
+            try:
+                import httpx
+                headers = {
+                    "Authorization": f"Bearer {self.openai_api_key}",
+                    "Content-Type": "application/json"
+                }
+                payload = {
+                    "model": "gpt-4o",
+                    "max_tokens": 1024,
+                    "messages": [
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_message}
+                    ]
+                }
+                response = httpx.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload, timeout=15.0)
+                if response.status_code == 200:
+                    raw_text = response.json()["choices"][0]["message"]["content"].strip()
+                    if raw_text and len(raw_text) > 10:
+                        return self._guardrail_filter(raw_text, profile)
+            except Exception:
+                pass
+
+        # 3. If Groq is available, we can call it (Groq does not train on API requests by default)
         if self.groq_api_key:
             try:
                 import httpx
@@ -108,12 +158,13 @@ class LLMRouter:
                         {"role": "user", "content": user_message}
                     ],
                     "temperature": 0.7,
-                    "max_tokens": 350
+                    "max_tokens": 1024
                 }
                 response = httpx.post("https://api.groq.com/openai/v1/chat/completions", headers=headers, json=payload, timeout=12.0)
                 if response.status_code == 200:
-                    raw_text = response.json()["choices"][0]["message"]["content"]
-                    return self._guardrail_filter(raw_text, profile)
+                    raw_text = response.json()["choices"][0]["message"]["content"].strip()
+                    if raw_text and len(raw_text) > 10:
+                        return self._guardrail_filter(raw_text, profile)
             except Exception as e:
                 # Log fallthrough to next rung
                 pass
@@ -132,13 +183,14 @@ class LLMRouter:
                         }],
                         "generationConfig": {
                             "temperature": 0.7,
-                            "maxOutputTokens": 800
+                            "maxOutputTokens": 1024
                         }
                     }
                     response = httpx.post(url, json=payload, timeout=10.0)
                     if response.status_code == 200:
                         raw_text = response.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
-                        return self._guardrail_filter(raw_text, profile)
+                        if raw_text and len(raw_text) > 10:
+                            return self._guardrail_filter(raw_text, profile)
                 except Exception:
                     pass
 
@@ -258,3 +310,91 @@ class LLMRouter:
             f"Hi {user_name}! ✨ I've got my notebook ready and my stickers aligned! "
             f"We're on track with your routine today. What are we tackling next together?"
         )
+
+    def generate_raw(self, system_prompt: str, messages: List[Dict[str, str]]) -> str:
+        """
+        Direct model invocation for multi-turn agent loops.
+        Uses highest-tier available provider (Claude > OpenAI > Groq > Gemini).
+        """
+        import httpx
+
+        # 1. Anthropic Claude (Claude 3.5 / 3.7 Sonnet)
+        if self.anthropic_api_key:
+            try:
+                headers = {
+                    "x-api-key": self.anthropic_api_key,
+                    "anthropic-version": "2023-06-01",
+                    "content-type": "application/json"
+                }
+                anthropic_messages = [
+                    {"role": m["role"], "content": m["content"]}
+                    for m in messages
+                ]
+                payload = {
+                    "model": "claude-3-5-sonnet-20241022",
+                    "max_tokens": 1024,
+                    "system": system_prompt,
+                    "messages": anthropic_messages
+                }
+                resp = httpx.post("https://api.anthropic.com/v1/messages", headers=headers, json=payload, timeout=20.0)
+                if resp.status_code == 200:
+                    return resp.json()["content"][0]["text"].strip()
+            except Exception:
+                pass
+
+        # 2. OpenAI GPT-4o
+        if self.openai_api_key:
+            try:
+                headers = {
+                    "Authorization": f"Bearer {self.openai_api_key}",
+                    "Content-Type": "application/json"
+                }
+                payload = {
+                    "model": "gpt-4o",
+                    "max_tokens": 1024,
+                    "messages": [{"role": "system", "content": system_prompt}, *messages]
+                }
+                resp = httpx.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload, timeout=20.0)
+                if resp.status_code == 200:
+                    return resp.json()["choices"][0]["message"]["content"].strip()
+            except Exception:
+                pass
+
+        # 3. Groq Llama 3.3 70B
+        if self.groq_api_key:
+            try:
+                headers = {
+                    "Authorization": f"Bearer {self.groq_api_key}",
+                    "Content-Type": "application/json"
+                }
+                payload = {
+                    "model": "llama-3.3-70b-versatile",
+                    "max_tokens": 800,
+                    "messages": [{"role": "system", "content": system_prompt}, *messages]
+                }
+                resp = httpx.post("https://api.groq.com/openai/v1/chat/completions", headers=headers, json=payload, timeout=15.0)
+                if resp.status_code == 200:
+                    return resp.json()["choices"][0]["message"]["content"].strip()
+            except Exception:
+                pass
+
+        # 4. Google Gemini Flash
+        if self.gemini_api_key:
+            try:
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={self.gemini_api_key}"
+                gemini_parts = [{"text": f"System:\n{system_prompt}\n"}]
+                for m in messages:
+                    gemini_parts.append({"text": f"{m['role'].capitalize()}: {m['content']}"})
+                payload = {
+                    "contents": [{"parts": gemini_parts}],
+                    "generationConfig": {"temperature": 0.5, "maxOutputTokens": 1024}
+                }
+                resp = httpx.post(url, json=payload, timeout=15.0)
+                if resp.status_code == 200:
+                    return resp.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
+            except Exception:
+                pass
+
+        # 5. Local fallback for agent loop
+        last_msg = messages[-1]["content"] if messages else ""
+        return f"Task processed with local fallback for: {last_msg[:60]}"

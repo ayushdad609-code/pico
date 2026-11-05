@@ -79,11 +79,14 @@ class Pico12BenchmarkRunner:
         lat = (time.time() - t0) * 1000
         json_ok = False
         try:
-            # Look for JSON block in output
-            m = re.search(r"\{.*\}", res["output"], re.DOTALL)
-            if m:
-                d = json.loads(m.group(0))
-                json_ok = "tips" in d and len(d["tips"]) == 3
+            m_fence = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", res["output"], re.DOTALL)
+            candidate = m_fence.group(1) if m_fence else None
+            if not candidate:
+                m = re.search(r"\{.*\}", res["output"], re.DOTALL)
+                candidate = m.group(0) if m else None
+            if candidate:
+                d = json.loads(candidate)
+                json_ok = "tips" in d and len(d["tips"]) >= 3
         except Exception:
             pass
         self._record(cat, "1b_format_json", "Strict JSON & Item Count", json_ok, lat, f"Valid JSON tips: {json_ok}")

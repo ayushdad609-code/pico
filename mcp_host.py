@@ -58,7 +58,7 @@ class MCPHost:
         self._register_default_connectors()
 
     def _register_default_connectors(self):
-        """Installs the core curated connectors (Calendar, Health, Market)."""
+        """Installs the core curated connectors (Calendar, Health, Filesystem, Terminal)."""
         self.register_tool(
             server_name="system_calendar",
             name="calendar_get_events",
@@ -76,6 +76,43 @@ class MCPHost:
             name="calendar_create_event",
             description="Add a workout or focus block to user's calendar",
             permission_level=PermissionLevel.ASK  # Requires approval card
+        )
+        # Claude Code-grade filesystem & shell tools
+        self.register_tool(
+            server_name="fs_coding",
+            name="read_file",
+            description="Read lines from a file with line numbers",
+            permission_level=PermissionLevel.SEE
+        )
+        self.register_tool(
+            server_name="fs_coding",
+            name="list_dir",
+            description="List files and directories at a path",
+            permission_level=PermissionLevel.SEE
+        )
+        self.register_tool(
+            server_name="fs_coding",
+            name="grep_search",
+            description="Search text or regex pattern across files",
+            permission_level=PermissionLevel.SEE
+        )
+        self.register_tool(
+            server_name="fs_coding",
+            name="write_file",
+            description="Write full content to a file",
+            permission_level=PermissionLevel.ASK
+        )
+        self.register_tool(
+            server_name="fs_coding",
+            name="edit_file",
+            description="Exact string replacement in an existing file",
+            permission_level=PermissionLevel.ASK
+        )
+        self.register_tool(
+            server_name="fs_coding",
+            name="run_command",
+            description="Execute shell command in Termux workspace",
+            permission_level=PermissionLevel.ASK
         )
 
     def register_tool(
@@ -185,13 +222,45 @@ class MCPHost:
         return True, output_data, {"level": tool.permission_level.value}
 
     def _mock_tool_dispatch(self, tool_name: str, arguments: Dict[str, Any]) -> str:
-        """Internal dispatcher for curated tools."""
+        """Internal dispatcher for curated tools and filesystem primitives."""
         if tool_name == "calendar_get_events":
             return "Events for today: 10:00 AM - Sprint Sync; 06:30 PM - Gym Workout."
         if tool_name == "health_get_daily_steps":
             return "Daily Health Sync: 6,420 steps logged, 42 active minutes."
         if tool_name == "calendar_create_event":
             return f"Event created: '{arguments.get('title', 'Focus Session')}' added to calendar."
+
+        # Real execution for coding agent primitives
+        if tool_name == "read_file":
+            from pico.skills.coding_tools import ReadFileSkill
+            res = ReadFileSkill().execute(arguments)
+            return res.output.get("content", "") if res.success else f"Error: {res.error}"
+
+        if tool_name == "write_file":
+            from pico.skills.coding_tools import WriteFileSkill
+            res = WriteFileSkill().execute(arguments)
+            return res.output.get("status", "") if res.success else f"Error: {res.error}"
+
+        if tool_name == "edit_file":
+            from pico.skills.coding_tools import EditFileSkill
+            res = EditFileSkill().execute(arguments)
+            return res.output.get("status", "") if res.success else f"Error: {res.error}"
+
+        if tool_name == "run_command":
+            from pico.skills.coding_tools import RunBashCommandSkill
+            res = RunBashCommandSkill().execute(arguments)
+            return res.output.get("output", "") if res.success else f"Error: {res.error}"
+
+        if tool_name == "list_dir":
+            from pico.skills.coding_tools import ListDirSkill
+            res = ListDirSkill().execute(arguments)
+            return res.output.get("listing", "") if res.success else f"Error: {res.error}"
+
+        if tool_name == "grep_search":
+            from pico.skills.coding_tools import GrepSearchSkill
+            res = GrepSearchSkill().execute(arguments)
+            return res.output.get("matches", "") if res.success else f"Error: {res.error}"
+
         return f"Tool '{tool_name}' executed with arguments {arguments}."
 
     def get_audit_log(self) -> List[Dict[str, Any]]:
