@@ -16,6 +16,7 @@ from .level_calculator import LevelCalculatorSkill
 from .runway_calculator import RunwayCalculatorSkill
 from .packing_checklist import PackingChecklistSkill
 from .browser_skill import BrowserSkill
+from .price_scraper_skill import ItemPriceScraperSkill
 from .device_skill import DeviceSkill
 from .coding_tools import (
     ReadFileSkill,
@@ -60,6 +61,8 @@ class SkillRegistry:
         self.register_skill(PackingChecklistSkill())
         # 9. Cloud Browser Agent (Hand #2)
         self.register_skill(BrowserSkill())
+        # 9b. Live Web Item & Price Scraper
+        self.register_skill(ItemPriceScraperSkill())
         # 10. Android Hardware & Device Sensors
         self.register_skill(DeviceSkill())
         # 11-16. Claude Code Filesystem & Terminal Primitives

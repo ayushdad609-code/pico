@@ -14,6 +14,7 @@ from .level_calculator import LevelCalculatorSkill
 from .runway_calculator import RunwayCalculatorSkill
 from .packing_checklist import PackingChecklistSkill
 from .browser_skill import BrowserSkill
+from .price_scraper_skill import ItemPriceScraperSkill
 from .device_skill import DeviceSkill
 from .coding_tools import (
     ReadFileSkill,
@@ -41,6 +42,7 @@ __all__ = [
     "RunwayCalculatorSkill",
     "PackingChecklistSkill",
     "BrowserSkill",
+    "ItemPriceScraperSkill",
     "DeviceSkill",
     "ReadFileSkill",
     "WriteFileSkill",

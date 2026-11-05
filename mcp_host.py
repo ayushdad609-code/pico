@@ -121,6 +121,25 @@ class MCPHost:
             description="Hermes skill self-improvement engine. 6 actions: create, read, update, test, rollback, deprecate.",
             permission_level=PermissionLevel.ASK
         )
+        # Live Web Scraping & Market Data tools
+        self.register_tool(
+            server_name="web_scraping",
+            name="scrape_item_prices",
+            description="Scrape live web pages or queries for products, live prices, and statistical analytics.",
+            permission_level=PermissionLevel.SEE
+        )
+        self.register_tool(
+            server_name="market_data",
+            name="fetch_crypto_price",
+            description="Fetch live real-time crypto prices from Binance (BTC, ETH, SOL, etc.).",
+            permission_level=PermissionLevel.SEE
+        )
+        self.register_tool(
+            server_name="device_sensors",
+            name="get_battery_status",
+            description="Inspect real-time phone battery percentage, temperature, and charging state.",
+            permission_level=PermissionLevel.SEE
+        )
 
     def register_tool(
         self,
@@ -273,6 +292,33 @@ class MCPHost:
             from pico.skills.skill_manage import SkillManageSkill
             res = SkillManageSkill().execute(arguments)
             return _json.dumps(res.output) if res.success else f"Error: {res.error}"
+
+        if tool_name == "scrape_item_prices":
+            from pico.skills.price_scraper_skill import ItemPriceScraperSkill
+            res = ItemPriceScraperSkill().execute(arguments)
+            return res.output.get("summary_text", "") if res.success else f"Error: {res.error}"
+
+        if tool_name == "fetch_crypto_price":
+            from pico.watchers import PriceWatcherEngine
+            pwe = PriceWatcherEngine()
+            sym = arguments.get("symbol", "BTCUSDT")
+            price = pwe.fetch_live_price(sym)
+            return f"Live {sym.upper()} price: ${price:,.2f}"
+
+        if tool_name == "get_battery_status":
+            import asyncio
+            from pico.device_sensors import BatterySensor
+            try:
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    import concurrent.futures
+                    with concurrent.futures.ThreadPoolExecutor() as pool:
+                        bs = pool.submit(asyncio.run, BatterySensor.get_status()).result()
+                else:
+                    bs = loop.run_until_complete(BatterySensor.get_status())
+            except Exception:
+                bs = asyncio.run(BatterySensor.get_status())
+            return bs.to_summary()
 
         return f"Tool '{tool_name}' executed with arguments {arguments}."
 

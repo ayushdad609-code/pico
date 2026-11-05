@@ -447,7 +447,18 @@ class LLMRouter:
         # Step 1: Issue tool call based on goal if first step
         if len(messages) == 1:
             u_low = user_goal.lower()
-            if "battery" in u_low or "charge" in u_low:
+            if "scrape" in u_low or "price" in u_low:
+                url_m = re.search(r"https?://[^\s'\"]+", user_goal)
+                url = url_m.group(0) if url_m else "https://books.toscrape.com/"
+                return f'```json\n{{"thought": "Scrape live item prices from web target", "tool": "scrape_item_prices", "args": {{"url": "{url}"}}}}\n```'
+            elif "crypto" in u_low or "btc" in u_low or "eth" in u_low or "sol" in u_low:
+                sym = "BTCUSDT"
+                if "eth" in u_low:
+                    sym = "ETHUSDT"
+                elif "sol" in u_low:
+                    sym = "SOLUSDT"
+                return f'```json\n{{"thought": "Fetch live crypto price from Binance", "tool": "fetch_crypto_price", "args": {{"symbol": "{sym}"}}}}\n```'
+            elif "battery" in u_low or "charge" in u_low:
                 return '```json\n{"thought": "Inspect device battery status", "tool": "get_battery_status", "args": {}}\n```'
             elif "file" in u_low or "read" in u_low:
                 path_m = re.search(r"['\"]?([a-zA-Z0-9_\-\.\/]+\.[a-zA-Z0-9]+)['\"]?", user_goal)

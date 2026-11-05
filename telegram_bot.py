@@ -13,6 +13,7 @@ Connects Pico directly to your phone via Telegram Bot API using async long-polli
 
 import os
 import sys
+import re
 import time
 import json
 import asyncio
@@ -447,6 +448,9 @@ class PicoTelegramBot:
                 "• 🚀 `/launch <app>` — Open phone apps (spotify, youtube, etc.)\n"
                 "• 📝 `/script <text>` — Script Doctor hook rater\n"
                 "• 💰 `/sip <amt> <rate> <years>` — SIP Compounding Calculator\n"
+                "• 🛍️ `/scrape [url|query]` — Live web item & price scraper with min/max analytics\n"
+                "• ⏰ `/schedule [HH:MM task]` — Autonomous background schedule manager\n"
+                "• 🎯 `/watch [symbol] [level]` — Real-time Binance crypto price watcher\n"
                 "• 🛠️ `/agent <task>` — Autonomous multi-step problem solver\n"
             )
 
@@ -659,24 +663,105 @@ class PicoTelegramBot:
             await self.api.send_message(chat_id, msg)
             return
 
-        # 14. Real-time Crypto Watcher
+        # 13b. Live Web Item & Price Scraper
+        if text_clean.startswith("/scrape"):
+            parts = text_clean.split(maxsplit=1)
+            target = parts[1].strip() if len(parts) > 1 else "https://books.toscrape.com/"
+            await self.api.send_chat_action(chat_id, "typing")
+
+            from pico.skills.price_scraper_skill import ItemPriceScraperSkill
+            scraper = ItemPriceScraperSkill()
+            inp = {"url": target} if target.startswith(("http://", "https://")) else {"query": target}
+            res = scraper.execute(inp)
+
+            if res.success:
+                reply = res.output.get("summary_text", "Scraped items successfully!")
+            else:
+                reply = f"⚠️ Price scraper error: {res.error}"
+            await self.api.send_message(chat_id, reply)
+            return
+
+        # 13c. Autonomous Dynamic Schedule Registry
+        if text_clean.startswith("/schedule"):
+            parts = text_clean.split(maxsplit=2)
+            runner = self.get_or_create_heartbeat_runner(chat_id, profile)
+
+            if len(parts) < 2:
+                # List existing scheduled jobs & watchers
+                jobs = runner.scheduled.list_jobs()
+                lines = ["⏰ **Pico 24/7 Scheduled Jobs Registry**:\n"]
+                for j in jobs:
+                    lines.append(f"• `{j['name']}`: {j['schedule']} (Status: {'Enabled' if j['enabled'] else 'Disabled'})")
+
+                if self.watcher_mgr.watchers:
+                    lines.append("\n📈 **Active Real-Time Price Watchers:**")
+                    for wid, w in self.watcher_mgr.watchers.items():
+                        lines.append(f"• `{w.symbol}`: alert if {w.direction} ${w.target_level:,.0f}")
+
+                lines.append("\n💡 *To schedule a new job: `/schedule HH:MM <Task Name>` (e.g. `/schedule 21:45 Read book`)*")
+                await self.api.send_message(chat_id, "\n".join(lines))
+                return
+
+            # Adding new scheduled job
+            time_part = parts[1].strip()
+            task_desc = parts[2].strip() if len(parts) > 2 else "Routine Task"
+
+            if re.match(r"^\d{1,2}:\d{2}$", time_part):
+                h, m = time_part.split(":")
+                norm_time = f"{int(h):02d}:{int(m):02d}"
+                from pico.scheduled import ScheduledJob
+                new_job = ScheduledJob(
+                    id=f"custom_{norm_time.replace(':', '_')}_{int(time.time())}",
+                    name=task_desc,
+                    schedule_display=f"Daily at {norm_time} IST",
+                    trigger_time=norm_time
+                )
+                runner.scheduled.register(new_job)
+                await self.api.send_message(
+                    chat_id,
+                    f"⏰ **Job Scheduled Successfully!**\n\n"
+                    f"• **Task:** `{task_desc}`\n"
+                    f"• **Trigger:** `{norm_time} IST` (24/7 background worker active)\n\n"
+                    f"Pico will proactively evaluate and push this notification when the clock touches {norm_time}! 🌟"
+                )
+                return
+            else:
+                await self.api.send_message(
+                    chat_id,
+                    "⚠️ Invalid time format. Please use `HH:MM` in 24h format (e.g. `/schedule 21:45 Read Habit`)."
+                )
+                return
+
+        # 14. Real-time Crypto Watcher (Multi-symbol support)
         if text_clean.startswith("/watch"):
             parts = text_clean.split()
             if len(parts) >= 2:
                 try:
-                    level = float(parts[1])
+                    if len(parts) >= 3:
+                        sym = parts[1].upper()
+                        if not sym.endswith("USDT"):
+                            sym += "USDT"
+                        level = float(parts[2])
+                    else:
+                        sym = "BTCUSDT"
+                        level = float(parts[1])
+
+                    cur_p = self.watcher_mgr.fetch_live_price(sym)
+                    direction = "above" if level > cur_p else "below"
+
                     w = PriceWatcher(
-                        id=f"watch_btc_{chat_id}_{int(level)}",
+                        id=f"watch_{sym.lower()}_{chat_id}_{int(level)}",
                         user_id=profile.user_id,
-                        symbol="BTCUSDT",
+                        symbol=sym,
                         target_level=level,
-                        direction="above" if level > 60000 else "below"
+                        direction=direction
                     )
                     self.watcher_mgr.add_watcher(w)
                     await self.api.send_message(
                         chat_id,
-                        f"🎯 **Watcher Armed:** Watching BTC at **${level:,.0f}**!\n"
-                        f"The second price touches this level, I'll send an instant alert!"
+                        f"🎯 **Watcher Armed:** Watching `{sym}` at **${level:,.2f}** (Current: ${cur_p:,.2f})!\n"
+                        f"Direction: Alert when price crosses **{direction}** threshold.\n"
+                        f"The second price crosses this level, I'll send an instant alert!"
                     )
                     return
                 except ValueError:
