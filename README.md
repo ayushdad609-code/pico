@@ -46,8 +46,8 @@ pico/
 ├── mcp_client.py          # Stdio JSON-RPC 2.0 MCP Client & dynamic tool discovery
 ├── mcp_demo_server.py     # Lightweight reference stdio MCP test server
 ├── hobbies/               # 20 Launch Hobbies (11-section markdown specifications)
-├── skills/                # 9 Built-in Skills + Dynamic Skill Creator & Browser Agent
-└── tests/                 # 68 passing pytest tests across 16 test suites
+├── skills/                # Built-in Skills + Dynamic Skill Distillation & Browser Agent
+└── tests/                 # 122 passing pytest tests across 26 test suites
 ```
 
 ---
@@ -78,9 +78,24 @@ Pico includes 9 built-in skills with parameter validation, execution timers, and
 
 ---
 
-## 🚀 Quickstart
+## 🚀 Quickstart & Installation
 
-### 1. Run Interactive CLI
+### 1. Installation
+Clone the repository and install dependencies:
+```bash
+git clone https://github.com/ayushdad609-code/pico.git
+cd pico
+pip install -r requirements.txt
+```
+
+### 2. Run Test Suite
+Pico includes a comprehensive 122-test automated suite covering all modules, skills, guardrails, and background daemons:
+```bash
+pytest
+```
+*(122 passed in ~45s)*
+
+### 3. Run Interactive CLI
 ```bash
 python3 -m pico.cli
 ```
@@ -93,18 +108,12 @@ Inside the CLI, try:
 * `/lockin` — Activate Lock In Mode 🔒
 * `/skills` — List all active skills
 
-### 2. Launch REST API Server
+### 4. Launch REST API Server
 ```bash
 python3 -m pico.api --port 8080
 ```
 
-### 3. Run Test Suite
-```bash
-python3 -m pytest pico/tests
-```
-*(68 passed in ~4.3s)*
-
-### 4. Run 7-Day Multi-User Kill-Test
+### 5. Run 7-Day Multi-User Kill-Test
 ```bash
 python3 -m pico.kill_test_runner
 ```

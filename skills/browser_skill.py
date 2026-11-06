@@ -3,10 +3,11 @@ Browser Agent & Clean Web Fetcher Skill for Pico (Hand #2).
 From YOUR_FRIEND_FULL_SETUP.pdf (§12 Access — Cloud Browser Agent & §17 Policy G1).
 """
 
+from __future__ import annotations
 import time
 import re
 from urllib.parse import urlparse
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 import httpx
 from html.parser import HTMLParser
 from .base_skill import BaseSkill, SkillResult

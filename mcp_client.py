@@ -9,10 +9,12 @@ Connects to standard external or local MCP servers over stdio via JSON-RPC 2.0:
 - Tool invocation (tools/call) with execution timeout, audit logging, and output truncation.
 """
 
+import os
 import sys
 import subprocess
 import json
 import time
+from pathlib import Path
 from typing import Dict, Any, List, Optional, Tuple
 from .mcp_host import MCPHost, PermissionLevel, MCPTool, AuditLogEntry
 
@@ -36,13 +38,21 @@ class MCPStdioClient:
     def connect(self) -> bool:
         """Launches the server subprocess and performs the initialize handshake."""
         try:
+            env = dict(os.environ)
+            repo_root = Path(__file__).resolve().parent
+            paths = [str(repo_root.parent), str(repo_root)]
+            if "PYTHONPATH" in env and env["PYTHONPATH"]:
+                paths.append(env["PYTHONPATH"])
+            env["PYTHONPATH"] = os.pathsep.join(paths)
+
             self.process = subprocess.Popen(
                 self.command,
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
-                bufsize=1
+                bufsize=1,
+                env=env
             )
             # 1. Initialize handshake
             init_req = {

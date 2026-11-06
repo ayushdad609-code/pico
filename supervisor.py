@@ -7,6 +7,7 @@ Guarantees continuous 24/7 operation on Android Termux with:
 4. Termux:Boot integration for automatic recovery on phone reboot.
 """
 
+from __future__ import annotations
 import os
 import sys
 import time
@@ -15,7 +16,7 @@ import logging
 import argparse
 import subprocess
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Dict, Any, List
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 PID_FILE = BASE_DIR / "pico" / "pico_daemon.pid"

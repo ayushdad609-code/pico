@@ -4,12 +4,14 @@ From YOUR_FRIEND_FULL_SETUP.pdf (§19 The Hobby Maker).
 """
 
 import os
+from pathlib import Path
 from pico.hobby_maker import HobbyMaker, HobbyRegistry, HobbySpec, InstrumentClass
+
+HOBBIES_DIR = str(Path(__file__).resolve().parent.parent / "hobbies")
 
 
 def test_hobby_registry_loading():
-    hobbies_dir = "/data/data/com.termux/files/home/pico/hobbies"
-    reg = HobbyRegistry(hobbies_dir)
+    reg = HobbyRegistry(HOBBIES_DIR)
 
     assert reg.has_hobby("gym") is True
     assert reg.has_hobby("trading") is True
@@ -24,8 +26,7 @@ def test_hobby_registry_loading():
 
 
 def test_trading_rulebook_constraints():
-    hobbies_dir = "/data/data/com.termux/files/home/pico/hobbies"
-    reg = HobbyRegistry(hobbies_dir)
+    reg = HobbyRegistry(HOBBIES_DIR)
 
     trading_md = reg.get_rulebook("trading")
     assert trading_md is not None
@@ -65,8 +66,7 @@ def test_all_20_launch_hobbies_schema_compliance():
     Validates that exactly 20 launch hobby rulebooks exist and conform
     100% to the 11-section schema from YOUR_FRIEND_FULL_SETUP.pdf (§19.3).
     """
-    hobbies_dir = "/data/data/com.termux/files/home/pico/hobbies"
-    reg = HobbyRegistry(hobbies_dir)
+    reg = HobbyRegistry(HOBBIES_DIR)
 
     assert len(reg.loaded_hobbies) == 20
 
