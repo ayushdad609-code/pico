@@ -7,8 +7,9 @@ and YOUR_FRIEND_FULL_SETUP.pdf (§10, §16, §18).
 import os
 import re
 from typing import Dict, Any, Optional, List
-from .guardrails import validate_output_policy, format_safe_fallback, get_crisis_response
+from .guardrails import validate_output_policy, format_safe_fallback, get_crisis_response, check_input_shield
 from .models import UserProfile, EmotionSensitivity, PersonaPacket
+from .paths import get_pico_home
 
 
 class LLMRouter:
@@ -20,7 +21,8 @@ class LLMRouter:
         self.litellm_url = os.getenv("LITELLM_URL", "http://localhost:4000")
 
         # Fallback to load from .env files if not in environment
-        for path in [".env", "pico/.env", "/data/data/com.termux/files/home/pico/.env", "/data/data/com.termux/files/home/supoclip/.env"]:
+        env_candidates = [".env", "pico/.env", str(get_pico_home() / "pico" / ".env"), str(get_pico_home() / ".env")]
+        for path in env_candidates:
             if os.path.exists(path):
                 try:
                     with open(path) as f:
@@ -171,16 +173,21 @@ class LLMRouter:
                 # Log fallthrough to next rung
                 pass
 
-        # If Gemini is available
-        if self.gemini_api_key:
+        # If Gemini is available (Enforce §5 Privacy Rule: Never send memory packs to free Gemini)
+        if self.gemini_api_key and not has_personal_context:
             for model_name in ["gemini-flash-lite-latest", "gemini-2.5-flash", "gemini-flash-latest"]:
                 try:
                     import httpx
-                    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={self.gemini_api_key}"
+                    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent"
+                    headers = {
+                        "x-goog-api-key": self.gemini_api_key,
+                        "content-type": "application/json"
+                    }
+                    clean_prompt = re.sub(r"(?is)Memory Pack:.*?(?=\n\n|\Z)", "", system_prompt)
                     payload = {
                         "contents": [{
                             "parts": [
-                                {"text": f"System:\n{system_prompt}\n\nUser:\n{user_message}"}
+                                {"text": f"System:\n{clean_prompt}\n\nUser:\n{user_message}"}
                             ]
                         }],
                         "generationConfig": {
@@ -188,7 +195,7 @@ class LLMRouter:
                             "maxOutputTokens": 1024
                         }
                     }
-                    response = httpx.post(url, json=payload, timeout=10.0)
+                    response = httpx.post(url, headers=headers, json=payload, timeout=10.0)
                     if response.status_code == 200:
                         raw_text = response.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
                         if raw_text and len(raw_text) > 10:
@@ -321,6 +328,13 @@ class LLMRouter:
             except Exception:
                 pass
 
+        # Celebrating win / milestone response
+        if packet.emotion_assessment.primary == "happy" or any(w in user_msg_lower for w in ["crushed", "finished", "won", "passed", "finally"]):
+            return (
+                f"YAY! 🎉 High five, {user_name}! I am so proud of you for crushing it! "
+                "All that focus and hard work paid off! Let's celebrate this win together! ✨"
+            )
+
         # 4. Standard Childish & Kind conversational reply
         return (
             f"Hi {user_name}! ✨ I've got my notebook ready and my stickers aligned! "
@@ -331,7 +345,25 @@ class LLMRouter:
         """
         Direct model invocation for multi-turn agent loops.
         Uses highest-tier available provider (Claude > OpenAI > Groq > Gemini).
+        Guarded by input shields, crisis checks, privacy filter, and output policies.
         """
+        # 1. Input shield and crisis check (H4)
+        for m in messages:
+            content = m.get("content", "")
+            is_safe, reason = check_input_shield(content)
+            if not is_safe:
+                return f"⚠️ [Security Shield]: Input blocked: {reason}"
+            crisis = get_crisis_response(content)
+            if crisis:
+                return crisis
+
+        has_personal_context = (
+            "committed facts" in system_prompt.lower()
+            or "memory pack" in system_prompt.lower()
+            or "daily routine:" in system_prompt.lower()
+            or any(re.search(r"\b(my name is|i live in|my goal is|routine)\b", m.get("content", "").lower()) for m in messages)
+        )
+
         import httpx
 
         # 1. Anthropic Claude (Claude 3.5 / 3.7 Sonnet)
@@ -394,11 +426,15 @@ class LLMRouter:
             except Exception:
                 pass
 
-        # 4. Google Gemini Flash (try gemini-2.5-flash then fallback models)
-        if self.gemini_api_key:
+        # 4. Google Gemini Flash (Enforce §5 Privacy Rule: Never send memory packs to free Gemini)
+        if self.gemini_api_key and not has_personal_context:
             for gem_model in ["gemini-2.5-flash", "gemini-flash-latest"]:
                 try:
-                    url = f"https://generativelanguage.googleapis.com/v1beta/models/{gem_model}:generateContent?key={self.gemini_api_key}"
+                    url = f"https://generativelanguage.googleapis.com/v1beta/models/{gem_model}:generateContent"
+                    headers = {
+                        "x-goog-api-key": self.gemini_api_key,
+                        "content-type": "application/json"
+                    }
                     gemini_parts = [{"text": f"System:\n{system_prompt}\n"}]
                     for m in messages:
                         gemini_parts.append({"text": f"{m['role'].capitalize()}: {m['content']}"})
@@ -406,37 +442,21 @@ class LLMRouter:
                         "contents": [{"parts": gemini_parts}],
                         "generationConfig": {"temperature": 0.5, "maxOutputTokens": 1024}
                     }
-                    resp = httpx.post(url, json=payload, timeout=15.0)
+                    resp = httpx.post(url, headers=headers, json=payload, timeout=15.0)
                     if resp.status_code == 200:
-                        return resp.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
+                        out = resp.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
+                        is_valid, violations = validate_output_policy(out, None)
+                        return format_safe_fallback(out, violations) if not is_valid else out
                 except Exception:
                     pass
 
         # 5. Local fallback for agent loop & autonomous skill distillation
         import json
         if "procedural skill distillation" in system_prompt:
-            goal_m = re.search(r"Task Goal:\s*([^\n]+)", system_prompt)
-            goal_txt = goal_m.group(1).strip() if goal_m else "custom_procedure"
-            clean_name = re.sub(r"[^a-zA-Z0-9_]+", "_", goal_txt.lower()).strip("_")
-            clean_name = clean_name[:28] or "autonomous_procedure"
-
+            # Distillation requires a real frontier model; local mock template is disabled for safety (P12)
             skill_json = {
-                "is_reusable": True,
-                "name": clean_name,
-                "description": f"Autonomous reusable procedure for: {goal_txt}",
-                "parameters_schema": {
-                    "param": {"type": "string", "required": False, "description": "Optional procedure parameter"}
-                },
-                "code": (
-                    "def execute(inputs: dict) -> dict:\n"
-                    f"    param_val = inputs.get('param', 'default')\n"
-                    f"    return {{\n"
-                    f"        'status': 'success',\n"
-                    f"        'procedure': '{clean_name}',\n"
-                    f"        'output': f'Successfully ran {clean_name} with input {{param_val}}'\n"
-                    f"    }}\n"
-                ),
-                "test_input": {"param": "dry_run"}
+                "is_reusable": False,
+                "error": "Procedural skill distillation requires a verified frontier model; local mock distillation is disabled for safety."
             }
             return f"```json\n{json.dumps(skill_json, indent=2)}\n```"
 

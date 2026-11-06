@@ -12,18 +12,19 @@ from .models import UserProfile
 from .onboarding import OnboardingFlow
 from .memory import MemoryStore
 from .routine import RoutineGraph
-from .scheduled import ScheduledWorkRegistry
+from .scheduled import ScheduledWorkRegistry, ScheduledJob
 from .heartbeat import HeartbeatRunner, HeartbeatOutcome
 from .watchers import PriceWatcher, PriceWatcherEngine
+from .paths import get_default_db_path
 
 
 class HeartbeatDaemon:
     def __init__(
         self,
-        db_path: str = "/data/data/com.termux/files/home/pico/pico_chat.db",
+        db_path: Optional[str] = None,
         tick_interval_seconds: int = 1800  # Default 30 minutes (1800s)
     ):
-        self.db_path = db_path
+        self.db_path = db_path or get_default_db_path()
         self.tick_interval = tick_interval_seconds
         self.running = True
 
@@ -41,13 +42,19 @@ class HeartbeatDaemon:
         self.heartbeat = HeartbeatRunner(self.profile, self.routine, self.scheduled)
         self.watchers = PriceWatcherEngine()
 
-        # Arm default Bitcoin price watcher
+        # Arm default Bitcoin price watcher and register in Scheduled Registry (H5)
         self.watchers.add_watcher(PriceWatcher(
             id="daemon_btc_watch",
             user_id=self.profile.user_id,
             symbol="BTCUSDT",
             target_level=65000.0,
             direction="below"
+        ))
+        self.scheduled.register(ScheduledJob(
+            id="daemon_btc_watch",
+            name="Bitcoin Dip Watcher (BTCUSDT <= 65000)",
+            schedule_display="Continuous background checks (every 60s)",
+            trigger_time="continuous"
         ))
 
         # Register OS signal handlers for clean exit
@@ -59,21 +66,28 @@ class HeartbeatDaemon:
         self.running = False
 
     def run_one_tick(self) -> dict:
-        """Runs a single evaluation tick across watchers and heartbeat."""
+        """Runs a single evaluation tick across watchers and heartbeat, enforcing Scheduled tab enablement."""
         now = datetime.now()
         now_str = now.strftime("%H:%M")
 
-        # 1. Evaluate Market Watchers (P0 Priority)
-        alerts = self.watchers.evaluate_watchers()
         fired_alerts = []
-        for a in alerts:
-            print(f"\n🚨 [P0 WATCHER FIRED]: {a.push_notification}")
-            print(f"📱 [IN-APP]: {a.in_app_card['headline']}")
-            fired_alerts.append(a.push_notification)
+        # 1. Evaluate Market Watchers (Gated by Scheduled Work Registry, H5)
+        pw_job = self.scheduled.jobs.get("price_watchers")
+        btc_job = self.scheduled.jobs.get("daemon_btc_watch")
+        if (pw_job and pw_job.enabled) or (btc_job and btc_job.enabled):
+            alerts = self.watchers.evaluate_watchers()
+            for a in alerts:
+                print(f"\n🚨 [P0 WATCHER FIRED]: {a.push_notification}")
+                print(f"📱 [IN-APP]: {a.in_app_card['headline']}")
+                fired_alerts.append(a.push_notification)
 
-        # 2. Fire 30-min Heartbeat (P2 Proactive)
-        beat = self.heartbeat.fire_beat(now_str)
-        print(f"💓 [Heartbeat #{beat.beat_number} at {now_str}]: Outcome={beat.outcome.value} ({beat.reason})")
+        # 2. Fire 30-min Heartbeat (Gated by Scheduled Work Registry, H5)
+        beat_res = "skipped_disabled"
+        hb_job = self.scheduled.jobs.get("heartbeat_checks")
+        if not hb_job or hb_job.enabled:
+            beat = self.heartbeat.fire_beat(now_str)
+            beat_res = beat.outcome.value
+            print(f"💓 [Heartbeat #{beat.beat_number} at {now_str}]: Outcome={beat.outcome.value} ({beat.reason})")
 
         return {
             "time": now_str,

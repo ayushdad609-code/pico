@@ -84,6 +84,30 @@ class ScheduledWorkRegistry:
             trigger_time="03:00"
         ))
 
+        # 6. Price Watchers (H5 / §8 Continuous P0 alerts)
+        reg.register(ScheduledJob(
+            id="price_watchers",
+            name="Market Price Watchers",
+            schedule_display="Continuous background checks (every 60s)",
+            trigger_time="continuous"
+        ))
+
+        # 7. Weekly Friend Report (Sunday 20:00)
+        reg.register(ScheduledJob(
+            id="weekly_report",
+            name="Weekly Friend Report",
+            schedule_display="Sundays at 20:00",
+            trigger_time="20:00"
+        ))
+
+        # 8. Proactive Heartbeat Checks (Every 30m)
+        reg.register(ScheduledJob(
+            id="heartbeat_checks",
+            name="Proactive Heartbeat Checks",
+            schedule_display="Every 30 minutes",
+            trigger_time="interval_30m"
+        ))
+
         return reg
 
     def register(self, job: ScheduledJob):

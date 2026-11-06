@@ -64,6 +64,17 @@ class MemoryStore:
                 )
             """)
 
+            # Crisis Events Log for Human Review <= 24h (§17 / M1)
+            self.conn.execute("""
+                CREATE TABLE IF NOT EXISTS crisis_events (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id TEXT NOT NULL,
+                    session_id TEXT NOT NULL,
+                    note TEXT NOT NULL,
+                    created_at TEXT NOT NULL
+                )
+            """)
+
     def store_fact(self, user_id: str, fact: Fact) -> int:
         """Store or update a fact in memory."""
         # Calculate expiration for staging facts (7 days)
@@ -213,3 +224,20 @@ class MemoryStore:
                 INSERT INTO memory_gaps (user_id, topic, fact_key, sensitivity, created_at)
                 VALUES (?, ?, ?, ?, ?)
             """, (user_id, topic, fact_key, sensitivity.value, datetime.now(timezone.utc).isoformat()))
+
+    def log_crisis_event(self, user_id: str, session_id: str, note: str = "Immediate crisis trigger"):
+        """Logs a crisis trigger event for human review <= 24h (§17 / M1)."""
+        with self.conn:
+            self.conn.execute("""
+                INSERT INTO crisis_events (user_id, session_id, note, created_at)
+                VALUES (?, ?, ?, ?)
+            """, (user_id, session_id, note, datetime.now(timezone.utc).isoformat()))
+
+    def get_crisis_events(self, user_id: str) -> List[Dict[str, Any]]:
+        """Retrieves logged crisis events for weekly reporting."""
+        with self.conn:
+            cursor = self.conn.execute("""
+                SELECT id, session_id, note, created_at
+                FROM crisis_events WHERE user_id = ? ORDER BY id DESC
+            """, (user_id,))
+            return [dict(r) for r in cursor.fetchall()]

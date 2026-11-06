@@ -47,6 +47,8 @@ def test_supervisor_wake_lock_handling():
 
 def test_termux_boot_script_exists_and_executable():
     boot_script = Path("/data/data/com.termux/files/home/.termux/boot/start-pico.sh")
+    if not boot_script.parent.parent.exists():
+        pytest.skip("Termux environment not detected; skipping device boot script verification.")
     assert boot_script.exists()
     assert os.access(boot_script, os.X_OK)
     content = boot_script.read_text()

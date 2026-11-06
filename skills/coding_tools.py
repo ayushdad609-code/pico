@@ -17,10 +17,11 @@ from typing import Dict, Any, Optional, List
 from .base_skill import BaseSkill, SkillResult
 from pico.mcp_host import PermissionLevel, BANNED_DANGEROUS_ACTIONS
 from pico.device_sensors import SafeCommandRunner
+from pico.paths import get_pico_home
 import asyncio
 
 
-ALLOWED_ROOT = "/data/data/com.termux/files/home"
+ALLOWED_ROOT = str(get_pico_home())
 BLOCKED_PATHS = ["/system", "/init", "/proc/kcore", "/dev/block", "/proc/sys", "/etc/sudoers"]
 MAX_OUTPUT_CHARS = 8000
 

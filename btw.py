@@ -71,20 +71,31 @@ class BTWEngine:
         self,
         packet: PersonaPacket,
         current_topic: str,
-        value_delivered: bool = True
+        value_delivered: bool = True,
+        is_p0_alert: bool = False
     ) -> Tuple[bool, Optional[MemoryGap]]:
         """
         The Ask Gate (ALL must pass per §11):
         1. Real value delivered first
         2. Topic genuinely raised
         3. <= 1 ask per output
-        4. <= 3/day
+        4. <= 3/day (resets daily at midnight)
         5. None in the last 3 outputs
         6. NEVER on P0 alerts, sad/tender talks, corrections, or disliked verdicts
         7. Attempts < 2
         8. ReactionPlan do_not vetoes absolutely
         """
         self.current_turn += 1
+
+        # Midnight daily reset for asks
+        today_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        if getattr(self, "last_ask_date", None) != today_str:
+            self.daily_ask_count = 0
+            self.last_ask_date = today_str
+
+        # Rule 6: Absolute veto on P0 alerts
+        if is_p0_alert:
+            return False, None
 
         # Rule 6 & 8: Veto on tender/crisis emotions or do_not rules
         if packet.emotion_assessment.sensitivity in [EmotionSensitivity.TENDER, EmotionSensitivity.CRISIS]:
@@ -102,7 +113,7 @@ class BTWEngine:
             return False, None
 
         # Rule 5: None in the last 3 outputs
-        if (self.current_turn - self.last_ask_turn) < 3:
+        if (self.current_turn - self.last_ask_turn) <= 3:
             return False, None
 
         # Find a matching open gap for current topic

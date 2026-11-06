@@ -81,23 +81,26 @@ Pico includes 9 built-in skills with parameter validation, execution timers, and
 ## 🚀 Quickstart & Installation
 
 ### 1. Installation
-Clone the repository and install dependencies:
+Clone the repository and install dependencies in editable mode:
 ```bash
 git clone https://github.com/ayushdad609-code/pico.git
 cd pico
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
+pip install -e .
 ```
 
 ### 2. Run Test Suite
-Pico includes a comprehensive 122-test automated suite covering all modules, skills, guardrails, and background daemons:
+Pico includes a comprehensive automated test suite covering all modules, skills, guardrails, and background daemons:
 ```bash
 pytest
 ```
-*(122 passed in ~45s)*
 
 ### 3. Run Interactive CLI
+Run the interactive terminal companion from the repository root:
 ```bash
-python3 -m pico.cli
+PYTHONPATH=. python3 -m pico.cli
 ```
 
 Inside the CLI, try:

@@ -14,6 +14,7 @@ from typing import Dict, Any, List, Optional, Tuple
 
 from .base_skill import BaseSkill, SkillResult
 from pico.mcp_host import PermissionLevel
+from pico.ssrf import is_safe_url
 
 
 class WebPriceParser(HTMLParser):
@@ -79,25 +80,41 @@ class ItemPriceScraperSkill(BaseSkill):
 
     @classmethod
     def scrape_url(cls, url: str, timeout: float = 8.0) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
-        """Scrapes a URL and parses item prices."""
+        """Scrapes a URL and parses item prices with strict SSRF validation."""
         if not url.startswith(("http://", "https://")):
             url = "https://" + url
 
-        parsed = urlparse(url)
-        host = parsed.hostname.lower() if parsed.hostname else ""
-        if any(dh in host for dh in cls.DISALLOWED_HOSTS) or host.startswith("192.168.") or host.startswith("10."):
-            raise ValueError("Target host is blocked by security policy.")
+        is_safe, err = is_safe_url(url)
+        if not is_safe:
+            raise ValueError(f"Target host is blocked by security policy: {err}")
 
         headers = {
             "User-Agent": "Mozilla/5.0 (Linux; Android 14; Mobile; Pico/1.0)"
         }
-        with httpx.Client(timeout=timeout, follow_redirects=True) as client:
-            resp = client.get(url, headers=headers)
-            if resp.status_code != 200:
-                raise RuntimeError(f"HTTP error {resp.status_code} fetching page.")
+        curr_url = url
+        html_text = ""
+        with httpx.Client(timeout=timeout, follow_redirects=False, trust_env=False) as client:
+            for _ in range(4):
+                resp = client.get(curr_url, headers=headers)
+                if resp.status_code in (301, 302, 303, 307, 308):
+                    redir = resp.headers.get("Location")
+                    if not redir:
+                        break
+                    if not redir.startswith(("http://", "https://")):
+                        from urllib.parse import urljoin
+                        redir = urljoin(curr_url, redir)
+                    safe_redir, redir_err = is_safe_url(redir)
+                    if not safe_redir:
+                        raise ValueError(f"SSRF violation on redirect: {redir_err}")
+                    curr_url = redir
+                    continue
+                if resp.status_code != 200:
+                    raise RuntimeError(f"HTTP error {resp.status_code} fetching page.")
+                html_text = resp.text[:1_000_000]
+                break
 
         parser = WebPriceParser()
-        parser.feed(resp.text)
+        parser.feed(html_text)
 
         items = []
         numeric_prices = []
@@ -185,7 +202,8 @@ class ItemPriceScraperSkill(BaseSkill):
 
             summary_lines.append("\n**Sample Scraped Items:**")
             for itm in items[:6]:
-                summary_lines.append(f"• `{itm['name'][:40]}`: **{itm['price_str']}**")
+                p_display = itm.get("price_str") or f"{itm.get('currency', '£')}{itm.get('price', 0.0)}"
+                summary_lines.append(f"• `{itm['name'][:40]}`: **{p_display}**")
 
             return SkillResult(
                 success=True,

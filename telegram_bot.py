@@ -40,6 +40,7 @@ from pico.agent_loop import AgentLoopEngine
 from pico.mcp_host import MCPHost
 from pico.heartbeat import HeartbeatRunner, HeartbeatOutcome
 from pico.scheduled import ScheduledWorkRegistry
+from pico.paths import get_pico_home, get_default_db_path
 
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -186,6 +187,8 @@ class PicoTelegramBot:
         self.mcp_host = MCPHost()
         self.agent_loop = AgentLoopEngine(self.mcp_host)
         self.pending_agent_tasks: Dict[int, Dict[str, Any]] = {}
+        self.pending_skill_proposals: Dict[int, Dict[str, Any]] = {}
+        self.pending_actions: Dict[str, Dict[str, Any]] = {}
         self.active_handoff_chat_id: Optional[int] = None
         self.user_modes: Dict[int, str] = {}
         self.user_profiles: Dict[int, UserProfile] = {}
@@ -195,7 +198,8 @@ class PicoTelegramBot:
         self.last_battery_alert_time: float = 0.0
         self.start_time: float = time.time()
         self.heartbeat_runners: Dict[int, HeartbeatRunner] = {}
-        self.admin_chat_id = int(os.getenv("TELEGRAM_ADMIN_CHAT_ID", "8570232011"))
+        admin_env = os.getenv("TELEGRAM_ADMIN_CHAT_ID")
+        self.admin_chat_id = int(admin_env) if admin_env and admin_env.isdigit() else None
         self.is_running = False
 
     def get_or_create_heartbeat_runner(self, chat_id: int, profile: UserProfile) -> HeartbeatRunner:
@@ -859,8 +863,9 @@ class PicoTelegramBot:
             active_mode=current_mode
         )
 
-        # Deduct usage tokens (~150 tokens)
-        self.token_mgr.record_usage(profile.user_id, 150)
+        # Deduct actual token usage (H2: estimate from turn tokens, never a flat 150)
+        tokens_consumed = res.get("tokens_estimated") or int(len(text_clean.split()) * 1.3 + len(res.get("output", "").split()) * 1.3) + 150
+        self.token_mgr.record_usage(profile.user_id, tokens_consumed)
 
         # Format character response
         mode_tag = res.get("mode", current_mode).upper()
@@ -1196,7 +1201,6 @@ class PicoTelegramBot:
         finally:
             for t in background_tasks.values():
                 t.cancel()
-                background_task.cancel()
             self.is_running = False
             logger.info("Telegram Bot stopped.")
 
@@ -1204,7 +1208,7 @@ class PicoTelegramBot:
 def main():
     token = os.getenv("TELEGRAM_BOT_TOKEN")
     if not token:
-        env_paths = [".env", "pico/.env", "/data/data/com.termux/files/home/pico/.env"]
+        env_paths = [".env", "pico/.env", str(get_pico_home() / "pico" / ".env"), str(get_pico_home() / ".env")]
         for ep in env_paths:
             if os.path.exists(ep):
                 try:

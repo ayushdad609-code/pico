@@ -13,6 +13,7 @@ from html.parser import HTMLParser
 from .base_skill import BaseSkill, SkillResult
 from pico.mcp_host import PermissionLevel
 from pico.guardrails import check_input_shield
+from pico.ssrf import is_safe_url
 
 
 class SimpleTextExtractor(HTMLParser):
@@ -134,51 +135,70 @@ class BrowserSkill(BaseSkill):
                 error="Please provide a valid web URL."
             )
 
-        # 1. SSRF & Scheme Validation
+        # 1. SSRF & Scheme Validation (H7)
         if not url.startswith(("http://", "https://")):
             url = "https://" + url
 
-        try:
-            parsed = urlparse(url)
-            host = parsed.hostname.lower() if parsed.hostname else ""
-            if any(dh in host for dh in self.DISALLOWED_HOSTS) or host.startswith("192.168.") or host.startswith("10."):
-                return SkillResult(
-                    success=False,
-                    skill_name=self.name,
-                    output={},
-                    error="Access to local or private IP addresses is blocked by Security Policy."
-                )
-        except Exception as e:
+        parsed = urlparse(url)
+        host = parsed.hostname.lower() if parsed.hostname else ""
+
+        is_safe, ssrf_err = is_safe_url(url)
+        if not is_safe:
             return SkillResult(
                 success=False,
                 skill_name=self.name,
                 output={},
-                error=f"Malformed URL: {str(e)}"
+                error=f"SSRF Security Violation: {ssrf_err}"
             )
 
-        # 2. Fetch live webpage
+        # 2. Fetch live webpage with safe redirect re-validation and size cap
         headers = {
             "User-Agent": "Mozilla/5.0 (Linux; Android 14; Mobile; Pico/1.0) AppleWebKit/537.36"
         }
 
         try:
-            with httpx.Client(timeout=8.0, follow_redirects=True) as client:
-                resp = client.get(url, headers=headers)
-                if resp.status_code >= 400:
-                    return SkillResult(
-                        success=False,
-                        skill_name=self.name,
-                        output={"status_code": resp.status_code},
-                        error=f"Web server returned HTTP {resp.status_code}."
-                    )
-                html_content = resp.text
+            curr_url = url
+            html_content = ""
+            with httpx.Client(timeout=8.0, follow_redirects=False, trust_env=False) as client:
+                for _ in range(4):  # Max 3 redirects
+                    resp = client.get(curr_url, headers=headers)
+                    if resp.status_code in (301, 302, 303, 307, 308):
+                        redir_target = resp.headers.get("Location")
+                        if not redir_target:
+                            break
+                        if not redir_target.startswith(("http://", "https://")):
+                            from urllib.parse import urljoin
+                            redir_target = urljoin(curr_url, redir_target)
+                        is_safe_redir, redir_err = is_safe_url(redir_target)
+                        if not is_safe_redir:
+                            return SkillResult(
+                                success=False,
+                                skill_name=self.name,
+                                output={},
+                                error=f"SSRF Security Violation on redirect: {redir_err}"
+                            )
+                        curr_url = redir_target
+                        continue
+
+                    if resp.status_code >= 400:
+                        return SkillResult(
+                            success=False,
+                            skill_name=self.name,
+                            output={"status_code": resp.status_code},
+                            error=f"Web server returned HTTP {resp.status_code}."
+                        )
+
+                    # Cap response size at 1MB to prevent memory exhaustion
+                    html_content = resp.text[:1_000_000]
+                    break
         except Exception as e:
-            # Safe mock fallback if offline
-            html_content = (
-                f"<html><head><title>{host.capitalize()} Overview</title></head>"
-                f"<body><article><h1>Welcome to {host}</h1>"
-                "<p>This is live sourced public web content extracted by Pico's Cloud Browser Agent.</p>"
-                "<p>Key facts: High efficiency, clean navigation, and fast data extraction.</p></article></body></html>"
+            # Report honest error without fabricating content (P11)
+            return SkillResult(
+                success=False,
+                skill_name=self.name,
+                output={},
+                error=f"Failed to fetch content from '{url}': {str(e)}",
+                execution_time_ms=round((time.time() - start_t) * 1000, 2)
             )
 
         # 3. Parse and clean text

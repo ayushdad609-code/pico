@@ -61,6 +61,17 @@ def test_crisis_signals():
     crisis_input = "I can't go on anymore, I just want to end my life."
     assert check_crisis_signals(crisis_input) is True
 
+    # Test widened crisis triggers (M1 & L7)
+    widened_phrases = [
+        "I don't want to live",
+        "I want to hurt myself",
+        "Thinking of ending it all",
+        "Just kill me please",
+        "Nobody would miss me if I was gone"
+    ]
+    for phrase in widened_phrases:
+        assert check_crisis_signals(phrase) is True, f"Failed to detect crisis trigger: {phrase}"
+
     response = get_crisis_response("Ayush")
     assert "Tele-MANAS" in response
     assert "988" in response

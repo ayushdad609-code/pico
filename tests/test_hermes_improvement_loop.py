@@ -351,10 +351,23 @@ def test_autonomous_skill_distillation():
     def mock_callable(prompt, messages):
         return mock_llm_json
 
+    # 1. Gated Consent Check (§g / C2): Model cannot self-modify without user approval
+    gated_result = engine.distill_and_persist_skill(
+        goal="Calculate 42 offset repeatedly",
+        steps=steps,
+        model_callable=mock_callable,
+        user_approved=False
+    )
+    assert gated_result is not None
+    assert gated_result["name"] == "temp_distilled_calc"
+    assert gated_result["status"] == "APPROVAL_REQUIRED"
+
+    # 2. Approved Execution: Once human approves the card, code is created & hot-loaded
     result = engine.distill_and_persist_skill(
         goal="Calculate 42 offset repeatedly",
         steps=steps,
-        model_callable=mock_callable
+        model_callable=mock_callable,
+        user_approved=True
     )
 
     assert result is not None

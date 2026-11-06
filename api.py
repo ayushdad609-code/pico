@@ -4,6 +4,7 @@ Allows any frontend (mobile app, web UI, curl) to communicate with Pico.
 """
 
 import json
+from typing import Optional
 from aiohttp import web
 from datetime import datetime, timezone
 from .models import UserProfile
@@ -18,11 +19,12 @@ from .artifacts import ArtifactFactory
 from .watchers import PriceWatcherEngine
 from .tokens import TokenManager
 from .reports import SelfAnalysisEngine, DailyScorecard
+from .paths import get_default_db_path
 
 
 class PicoServer:
-    def __init__(self, db_path: str = "/data/data/com.termux/files/home/pico/pico_chat.db"):
-        self.db_path = db_path
+    def __init__(self, db_path: Optional[str] = None):
+        self.db_path = db_path or get_default_db_path()
         self.memory = MemoryStore(db_path)
         self.pipeline = PipelineEngine(self.memory)
         self.watcher_engine = PriceWatcherEngine()

@@ -3,11 +3,15 @@ MCP (Model Context Protocol) Host & Permission Ladder Engine for Pico.
 From YOUR_FRIEND_FULL_SETUP.pdf (§12 Access — Hands, Permissions, MCP & Connectors).
 """
 
+import os
 import re
+import json
+import sqlite3
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Dict, Any, List, Optional, Tuple
+from pico.paths import get_default_db_path
 
 
 class PermissionLevel(str, Enum):
@@ -18,12 +22,17 @@ class PermissionLevel(str, Enum):
     BLOCKED = "BLOCKED"        # Banned operations: withdraw crypto, send money, delete without card
 
 
-# Hard-banned tool keywords that are permanently locked to BLOCKED (§12)
+# Hard-banned tool keywords that are permanently locked to BLOCKED (§12 / M7)
 BANNED_DANGEROUS_ACTIONS = [
     re.compile(r"(?:\b|_)(withdraw|transfer[_\s]money|send[_\s]money|pay|buy[_\s]stock|execute[_\s]trade)(?:s|\b|_)", re.IGNORECASE),
     re.compile(r"(?:\b|_)(delete[_\s]all|drop[_\s]table|format[_\s]disk|wipe)(?:s|\b|_)", re.IGNORECASE),
     re.compile(r"(?:\b|_)(send[_\s]email[_\s]as|dm[_\s]user[_\s]as|post[_\s]as)(?:s|\b|_)", re.IGNORECASE),
 ]
+
+BANNED_ACTION_VERBS = {
+    "withdraw", "transfer", "send", "sell", "pay", "buy_stock",
+    "execute_trade", "delete", "drop", "format", "wipe", "post"
+}
 
 
 @dataclass
@@ -50,12 +59,51 @@ class MCPHost:
     """
     Pico MCP Host Client with Permission Ladder and Safety Guardrails (§12).
     """
-    def __init__(self):
+    def __init__(self, db_path: Optional[str] = None):
+        self.db_path = db_path or get_default_db_path()
         self.servers: Dict[str, Dict[str, Any]] = {}
         self.tools: Dict[str, MCPTool] = {}
         self.audit_log: List[AuditLogEntry] = []
         self.server_failures: Dict[str, int] = {}
+        self._init_db()
         self._register_default_connectors()
+
+    def _init_db(self):
+        try:
+            conn = sqlite3.connect(self.db_path)
+            with conn:
+                conn.execute("""
+                    CREATE TABLE IF NOT EXISTS mcp_audit_log (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        timestamp TEXT NOT NULL,
+                        tool_name TEXT NOT NULL,
+                        server_name TEXT NOT NULL,
+                        arguments TEXT,
+                        result TEXT,
+                        permission_used TEXT,
+                        user_approved INTEGER
+                    )
+                """)
+            conn.close()
+        except Exception:
+            pass
+
+    def _persist_audit_entry(self, entry: AuditLogEntry):
+        try:
+            conn = sqlite3.connect(self.db_path)
+            with conn:
+                conn.execute("""
+                    INSERT INTO mcp_audit_log (
+                        timestamp, tool_name, server_name, arguments, result, permission_used, user_approved
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    entry.timestamp, entry.tool_name, entry.server_name,
+                    json.dumps(entry.arguments), entry.result, entry.permission_used,
+                    int(entry.user_approved)
+                ))
+            conn.close()
+        except Exception:
+            pass
 
     def _register_default_connectors(self):
         """Installs the core curated connectors (Calendar, Health, Filesystem, Terminal)."""
@@ -160,6 +208,13 @@ class MCPHost:
                 permission_level = PermissionLevel.BLOCKED
                 break
 
+        # Explicit deny-list of tool name verbs (M7)
+        tool_name_lower = name.lower()
+        tool_tokens = set(re.split(r"[_\-\s]+", tool_name_lower))
+        if any(v in tool_tokens for v in BANNED_ACTION_VERBS) or any(tool_name_lower.startswith(v) for v in ["delete", "transfer", "send", "sell", "withdraw", "pay", "drop", "format", "wipe"]):
+            if not any(w in tool_name_lower for w in ["read", "get", "status", "list", "search", "check"]):
+                permission_level = PermissionLevel.BLOCKED
+
         if permission_level is None:
             # Default ladder rule: read = SEE, write = ASK
             if any(w in name.lower() for w in ["get", "read", "fetch", "list", "search"]):
@@ -206,6 +261,7 @@ class MCPHost:
                 user_approved=False
             )
             self.audit_log.append(entry)
+            self._persist_audit_entry(entry)
             return False, "This action is permanently BLOCKED by Pico's Safety Policy.", {"level": "BLOCKED"}
 
         # 2. ASK LEVEL: Requires explicit user approval card
@@ -220,6 +276,7 @@ class MCPHost:
                 user_approved=False
             )
             self.audit_log.append(entry)
+            self._persist_audit_entry(entry)
             return False, f"Approval Card Required: Pico is requesting permission to run '{tool_name}'.", {
                 "approval_required": True,
                 "tool_name": tool_name,
@@ -244,6 +301,7 @@ class MCPHost:
             user_approved=user_approved
         )
         self.audit_log.append(entry)
+        self._persist_audit_entry(entry)
 
         return True, output_data, {"level": tool.permission_level.value}
 

@@ -4,10 +4,16 @@ Allows testing onboarding, talking to Chill Pico, inspecting memory and emotions
 """
 
 import sys
-from .models import UserProfile, Fact, FactStatus, FactSource
+from .models import UserProfile
 from .memory import MemoryStore
 from .pipeline import PipelineEngine
 from .onboarding import OnboardingFlow, LAUNCH_CATEGORIES
+from .routine import RoutineGraph
+from .briefs import BriefGenerator
+from .scheduled import ScheduledWorkRegistry
+from .heartbeat import HeartbeatRunner
+from .watchers import PriceWatcherEngine
+from .tokens import TokenManager
 
 
 def run_interactive_cli():
@@ -62,7 +68,7 @@ def run_interactive_cli():
     skill_creator = SkillCreator(skill_registry)
 
     print("\n" + "=" * 65)
-    print(f"✨ PICO IS ALIVE! Mode: CHILL (Resting state)")
+    print("✨ PICO IS ALIVE! Mode: CHILL (Resting state)")
     print(f"✏️  Pico wrote '{profile.name}' in his notebook.")
     print("Type your message to chat.")
     print("Special commands:")
@@ -337,7 +343,7 @@ def run_interactive_cli():
 
             if user_msg == "/tokens":
                 pct = token_account.usage_percentage
-                print(f"\n🪙 [Tokens Page (You Tab)]:")
+                print("\n🪙 [Tokens Page (You Tab)]:")
                 print(f"  Remaining: {token_account.tokens_remaining:,} / {token_account.monthly_allowance:,} tokens")
                 print(f"  Usage:     {pct:.1f}%")
                 print(f"  State:     {'⚠️ LOW POWER FRIEND (Basic chat & watchers alive)' if token_account.is_low_power else '⚡ Full Power'}")

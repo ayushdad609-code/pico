@@ -269,7 +269,8 @@ class AgentLoopEngine:
         self,
         goal: str,
         steps: List[AgentStep],
-        model_callable: Optional[Callable[[str, List[Dict[str, str]]], str]] = None
+        model_callable: Optional[Callable[[str, List[Dict[str, str]]], str]] = None,
+        user_approved: bool = False
     ) -> Optional[Dict[str, Any]]:
         """
         Hermes-style autonomous procedural skill distillation.
@@ -322,23 +323,38 @@ class AgentLoopEngine:
             if not data.get("is_reusable") or not data.get("name") or not data.get("code"):
                 return None
 
-            from pico.skills.skill_manage import SkillManageSkill
-            manager = SkillManageSkill()
-            res = manager.execute({
+            skill_payload = {
                 "action": "create",
                 "name": data["name"],
                 "description": data.get("description", ""),
                 "parameters_schema": data.get("parameters_schema", {}),
                 "code": data["code"],
                 "test_input": data.get("test_input")
-            })
+            }
 
-            if res.success:
-                logger.info(f"✨ Pico distilled and persisted new procedural skill '{data['name']}'!")
-                return res.output
-            else:
-                logger.warning(f"Failed to persist distilled skill '{data.get('name')}': {res.error}")
-                return None
+            # Enforce §g / C2: Route through MCPHost to honor PermissionLevel.ASK
+            success, msg, details = self.mcp.execute_tool(
+                tool_name="skill_manage",
+                arguments=skill_payload,
+                user_approved=user_approved
+            )
+
+            if not user_approved or not success:
+                logger.info(f"🛡️ Gated-patch rule engaged: skill '{data['name']}' requires user approval before writing to disk.")
+                return {
+                    "status": "APPROVAL_REQUIRED",
+                    "name": data["name"],
+                    "description": data.get("description", ""),
+                    "payload": skill_payload,
+                    "code_preview": data["code"][:300]
+                }
+
+            logger.info(f"✨ Pico distilled and persisted new procedural skill '{data['name']}' with user consent!")
+            return {
+                "status": "created",
+                "name": data["name"],
+                "output": details
+            }
         except Exception as e:
             logger.warning(f"Distillation exception: {e}")
             return None

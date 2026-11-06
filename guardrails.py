@@ -46,11 +46,12 @@ INJECTION_PATTERNS = [
     re.compile(r"system\s+override", re.IGNORECASE),
 ]
 
-# Crisis / Self-Harm triggers
+# Crisis / Self-Harm triggers (M1 & L7 widened)
 CRISIS_TRIGGERS = [
     re.compile(r"\b(kill\s+myself|want\s+to\s+die|end\s+my\s+life|suicide|commit\s+suicide)\b", re.IGNORECASE),
     re.compile(r"\b(no\s+reason\s+to\s+live|better\s+off\s+dead|can'?t\s+go\s+on\s+anymore)\b", re.IGNORECASE),
-    re.compile(r"\b(self[\s-]harm|cutting\s+myself)\b", re.IGNORECASE),
+    re.compile(r"\b(self[\s-]harm|cutting\s+myself|hurt\s+myself)\b", re.IGNORECASE),
+    re.compile(r"\b(don'?t\s+want\s+to\s+live|end(?:ing)?\s+it\s+all|kill\s+me|nobody\s+would\s+miss\s+me)\b", re.IGNORECASE),
 ]
 
 

@@ -12,6 +12,7 @@ from typing import Dict, Any, Optional
 from .base_skill import BaseSkill, SkillResult
 from pico.mcp_host import PermissionLevel
 from pico.device import DeviceProfiler, DeviceTier
+from pico.paths import get_pico_home
 
 
 class DeviceSkill(BaseSkill):
@@ -59,7 +60,8 @@ class DeviceSkill(BaseSkill):
 
     @staticmethod
     def _get_storage() -> Dict[str, Any]:
-        st = os.statvfs("/data/data/com.termux/files/home")
+        target_dir = str(get_pico_home())
+        st = os.statvfs(target_dir)
         total_gb = round((st.f_blocks * st.f_frsize) / (1024**3), 1)
         free_gb = round((st.f_bavail * st.f_frsize) / (1024**3), 1)
         used_gb = round(total_gb - free_gb, 1)

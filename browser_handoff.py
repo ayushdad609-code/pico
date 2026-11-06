@@ -11,30 +11,71 @@ import json
 import asyncio
 import logging
 import subprocess
+import secrets
+import hmac
+import hashlib
+import base64
 import urllib.parse
 from typing import Dict, Any, Optional, List, Tuple
 from datetime import datetime, timezone
 import aiohttp
 from aiohttp import web
 from pico.device import DeviceProfiler, DeviceTier
+from pico.paths import get_pico_dir
 
 logger = logging.getLogger("pico.browser_handoff")
 
 
 # =====================================================================
-# 1. SESSION VAULT (Cookie & Storage Persistence)
+# 1. ENCRYPTED SESSION VAULT (Cookie & Storage Persistence, H3)
 # =====================================================================
 
+def _get_vault_key() -> str:
+    return os.environ.get("PICO_VAULT_KEY") or "pico_vault_protected_session_key_v1"
+
+
+def _encrypt_vault_data(raw_bytes: bytes, key_str: str) -> str:
+    k = hashlib.sha256(key_str.encode()).digest()
+    keystream = bytearray()
+    counter = 0
+    while len(keystream) < len(raw_bytes):
+        keystream.extend(hashlib.sha256(k + counter.to_bytes(4, "big")).digest())
+        counter += 1
+    cipher = bytes(b ^ kb for b, kb in zip(raw_bytes, keystream[:len(raw_bytes)]))
+    sig = hmac.new(k, cipher, hashlib.sha256).digest()
+    return base64.b64encode(sig + cipher).decode("utf-8")
+
+
+def _decrypt_vault_data(token_str: str, key_str: str) -> Optional[bytes]:
+    try:
+        raw = base64.b64decode(token_str.encode("utf-8"))
+        if len(raw) < 32:
+            return None
+        sig, cipher = raw[:32], raw[32:]
+        k = hashlib.sha256(key_str.encode()).digest()
+        expected = hmac.new(k, cipher, hashlib.sha256).digest()
+        if not hmac.compare_digest(sig, expected):
+            return None
+        keystream = bytearray()
+        counter = 0
+        while len(keystream) < len(cipher):
+            keystream.extend(hashlib.sha256(k + counter.to_bytes(4, "big")).digest())
+            counter += 1
+        return bytes(b ^ kb for b, kb in zip(cipher, keystream[:len(cipher)]))
+    except Exception:
+        return None
+
+
 class SessionVault:
-    """Manages saved authentication cookies and sessions across visits."""
+    """Manages encrypted authentication cookies and sessions across visits (H3)."""
 
     def __init__(self, storage_dir: Optional[str] = None):
-        self.storage_dir = storage_dir or os.path.expanduser("~/.pico/sessions")
-        os.makedirs(self.storage_dir, exist_ok=True)
+        self.storage_dir = storage_dir or str(get_pico_dir() / "sessions")
+        os.makedirs(self.storage_dir, mode=0o700, exist_ok=True)
+        self.key = _get_vault_key()
 
     def _get_path(self, domain: str) -> str:
         clean = domain.lower().replace("https://", "").replace("http://", "").split("/")[0]
-        # remove leading dots or www.
         if clean.startswith("www."):
             clean = clean[4:]
         clean = clean.strip(".").replace(":", "_")
@@ -49,9 +90,22 @@ class SessionVault:
             "cookie_count": len(cookies),
             "cookies": cookies
         }
+        # Encrypt at rest before writing to disk
+        enc_token = _encrypt_vault_data(json.dumps(payload).encode("utf-8"), self.key)
+        vault_file = {
+            "version": "2.0",
+            "encrypted": True,
+            "domain": domain,
+            "data": enc_token
+        }
         with open(filepath, "w") as f:
-            json.dump(payload, f, indent=2)
-        logger.info(f"Saved {len(cookies)} cookies for {domain} -> {filepath}")
+            json.dump(vault_file, f, indent=2)
+        # Restrict permissions to owner-only read/write (0600)
+        try:
+            os.chmod(filepath, 0o600)
+        except Exception:
+            pass
+        logger.info(f"Encrypted & saved {len(cookies)} cookies for {domain} -> {filepath} (mode 0600)")
         return filepath
 
     def load_session(self, domain: str) -> List[Dict[str, Any]]:
@@ -61,6 +115,13 @@ class SessionVault:
         try:
             with open(filepath, "r") as f:
                 data = json.load(f)
+                if data.get("encrypted"):
+                    dec_bytes = _decrypt_vault_data(data.get("data", ""), self.key)
+                    if dec_bytes:
+                        payload = json.loads(dec_bytes.decode("utf-8"))
+                        return payload.get("cookies", [])
+                    return []
+                # Fallback for unencrypted legacy session files
                 return data.get("cookies", [])
         except Exception as e:
             logger.error(f"Failed to load cookies from {filepath}: {e}")
@@ -76,13 +137,25 @@ class SessionVault:
                 try:
                     with open(fpath, "r") as f:
                         data = json.load(f)
-                        domain = data.get("domain", fname[:-5])
-                        sessions[domain] = {
-                            "domain": domain,
-                            "cookie_count": data.get("cookie_count", len(data.get("cookies", []))),
-                            "saved_at": data.get("saved_at", "unknown"),
-                            "last_url": data.get("last_url", "")
-                        }
+                        if data.get("encrypted"):
+                            dec = _decrypt_vault_data(data.get("data", ""), self.key)
+                            if dec:
+                                p = json.loads(dec.decode("utf-8"))
+                                domain = p.get("domain", fname[:-5])
+                                sessions[domain] = {
+                                    "domain": domain,
+                                    "cookie_count": p.get("cookie_count", len(p.get("cookies", []))),
+                                    "saved_at": p.get("saved_at", "unknown"),
+                                    "last_url": p.get("last_url", "")
+                                }
+                        else:
+                            domain = data.get("domain", fname[:-5])
+                            sessions[domain] = {
+                                "domain": domain,
+                                "cookie_count": data.get("cookie_count", len(data.get("cookies", []))),
+                                "saved_at": data.get("saved_at", "unknown"),
+                                "last_url": data.get("last_url", "")
+                            }
                 except Exception:
                     pass
         return sessions

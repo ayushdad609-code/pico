@@ -20,11 +20,12 @@ from .models import (
 )
 from .memory import MemoryStore
 from .examiner import EmotionExaminer
-from .guardrails import check_input_shield, validate_output_policy, format_safe_fallback
+from .guardrails import check_input_shield, validate_output_policy, format_safe_fallback, check_crisis_signals, get_crisis_response
 from .prompt import render_system_prompt
 from .router import LLMRouter
 from .hermes_memory import HermesMemoryCoordinator
 from .hermes_curator import HermesMemoryCurator
+from .btw import BTWEngine
 
 
 class PipelineEngine:
@@ -34,6 +35,7 @@ class PipelineEngine:
         self.router = router or LLMRouter()
         self.hermes_memory = HermesMemoryCoordinator(memory_store)
         self.hermes_curator = HermesMemoryCurator(self.hermes_memory, memory_store)
+        self.btw_engine = BTWEngine()
         self.run_history: list = []
 
     def run(
@@ -51,9 +53,22 @@ class PipelineEngine:
         started_at = datetime.now(timezone.utc).isoformat()
 
         # =========================================================
-        # STEP 0: ROUTE & PRIORITY
+        # STEP 0: ROUTE & PRIORITY + IMMEDIATE CRISIS CHECK (M1)
         # =========================================================
         priority = "P1" if trigger == "user_chat" else ("P0" if trigger == "alert" else "P2")
+
+        if check_crisis_signals(user_message):
+            crisis_resp = get_crisis_response(profile.name)
+            self.memory.log_crisis_event(profile.user_id, run_id, "Crisis signals detected at Step 0")
+            return {
+                "run_id": run_id,
+                "status": "crisis_override",
+                "output": crisis_resp,
+                "mode": "crisis",
+                "emotion": PicoEmotion.WORRIED.value,
+                "is_crisis": True,
+                "tokens_estimated": len(crisis_resp.split()) + 50
+            }
 
         # =========================================================
         # STEP 1: CHAT (receive & shield check)
@@ -74,6 +89,11 @@ class PipelineEngine:
         # =========================================================
         # STEP 2: THINK + STORE (Friend Test & Fact Extraction)
         # =========================================================
+        # Check if user answered a pending BTW ask (Step 2 pre-check, §11 / M2)
+        captured_fact = self.btw_engine.capture_answer(user_message, profile.user_id)
+        if captured_fact:
+            self.memory.store_fact(profile.user_id, captured_fact)
+
         extracted_facts = self._extract_facts(user_message, mode)
         for fact in extracted_facts:
             self.memory.store_fact(profile.user_id, fact)
@@ -231,6 +251,16 @@ class PipelineEngine:
         # 5e. Self-Check Gate
         is_valid, violations = validate_output_policy(raw_output, profile)
         final_output = raw_output if is_valid else format_safe_fallback(raw_output, violations)
+
+        # 5f. The BTW Engine Slot (Contextual Ask Gate, §11 / M2)
+        if priority != "P0":
+            passed, gap = self.btw_engine.evaluate_ask_gate(
+                packet=packet,
+                current_topic=mode,
+                value_delivered=True
+            )
+            if passed and gap:
+                final_output = f"{final_output}\n\n{gap.question_template}"
 
         # =========================================================
         # STEP 6: LEARN & AUDIT LOG (with Hermes Reflection)
