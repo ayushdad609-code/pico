@@ -26,7 +26,7 @@ class CallSession:
         r"\bhello\b",
         r"^(?:hi|hey)\b",
         r"\b(?:hi|hey)\s+(?:there|pico|ayush|sir|bhai|uncle|ji)\b",
-        r"\bhaan\s+(?:bol|batao|ji|bhai)?\b",
+        r"\bhaan(?:\s+(?:bol|batao|ji|bhai))?\b",
         r"\b(?:haanji|namaste|namaskar|pranam)\b",
         r"\b(?:kahiye|bataiye|bolo)\b",
         r"\b(?:who is|kaun|kon)\s+(?:speaking|calling|this|hai|bol raha)\b",
@@ -95,7 +95,10 @@ class CallSession:
             # Speak mandatory opening disclosure
             opening = get_opening_disclosure_line(self.packet, user_name=self.user_name)
             checked = self.commitment_checker.verify_utterance(opening, self.packet)
-            reply = checked.sanitized_text or opening
+            if not checked.allowed:
+                reply = f"Hello, I'm an AI assistant calling on behalf of {self.user_name}."
+            else:
+                reply = checked.sanitized_text or opening
             
             self.transcript.append({
                 "role": "assistant",
@@ -112,8 +115,13 @@ class CallSession:
                 "text": caller_clean,
                 "timestamp": time.time()
             })
-            # Check for simple acknowledgment
-            return f"Understood, thank you. Regarding {self.packet.objective}, I will note that down."
+            response = f"Understood, thank you. Regarding {self.packet.objective}, I will note that down."
+            self.transcript.append({
+                "role": "assistant",
+                "text": response,
+                "timestamp": time.time()
+            })
+            return response
 
         return ""
 
@@ -147,7 +155,10 @@ class CallSession:
         answer = self.user_decision
         reply = f"Thanks for waiting. Ayush says: {answer}."
         checked = self.commitment_checker.verify_utterance(reply, self.packet)
-        final_reply = checked.sanitized_text or reply
+        if not checked.allowed:
+            final_reply = "Ayush cannot authorize that over the phone. He will follow up with you directly."
+        else:
+            final_reply = checked.sanitized_text or reply
         
         self.status = CallStatus.CONNECTED
         self.pending_question = None

@@ -13,9 +13,7 @@ def test_audio_bridge_instant_interruption_flush():
     assert is_speech is True
     assert bridge.is_interrupted() is True
     
-    # Verify buffer is instantly flushed in < 50ms
-    flushed = bridge.flush_playback()
-    assert flushed > 0
+    # Verify buffer is instantly flushed in < 50ms upon speech frame
     assert bridge.has_pending_audio() is False
 
 def test_silence_does_not_interrupt():

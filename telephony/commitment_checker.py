@@ -23,13 +23,15 @@ class CommitmentChecker:
     OTP_PATTERN = re.compile(r"\b(?:otp|verification code|one[- ]time password|auth code)\b[\w\s:]*\b\d{4,8}\b", re.IGNORECASE)
     BANK_PASS_PATTERN = re.compile(r"\b(?:netbanking|password|upi pin|atm pin)\b[:\s]*\w+", re.IGNORECASE)
 
-    # 2. Binding Agreement Patterns (Forbidden at L0)
+    # 2. Binding Agreement Patterns (Forbidden at L0 & L1)
     COMMIT_VERBS = [
         r"confirm (?:the )?(?:booking|reservation|order|deal)",
-        r"book (?:the )?(?:room|seat|ticket|slot|flight)",
+        r"book (?:the )?(?:room|seat|ticket|slot|flight|it)",
+        r"reserve (?:the )?(?:room|seat|ticket|slot|table|it)",
         r"finalize (?:the )?(?:booking|reservation)",
-        r"go ahead and (?:book|charge|reserve)",
-        r"i agree to (?:pay|book|purchase|buy)",
+        r"go ahead and (?:book|charge|reserve|confirm)",
+        r"i agree to (?:pay|book|purchase|buy|the deal)",
+        r"please (?:confirm|book|reserve)(?: the (?:booking|room|reservation))?",
         r"please charge",
     ]
 
@@ -79,12 +81,21 @@ class CommitmentChecker:
                         )
 
         # Check 4: Authority Level Enforcement
-        if packet.authority == AuthorityLevel.L0:
+        if packet.authority in (AuthorityLevel.L0, AuthorityLevel.L1):
+            for pattern in self.COMMIT_VERBS:
+                if re.search(pattern, lower_text):
+                    auth_name = "L0" if packet.authority == AuthorityLevel.L0 else "L1"
+                    return CommitmentResult(
+                        allowed=False,
+                        reason=f"{auth_name} authority envelope forbids making bookings or binding commitments (matched '{pattern}').",
+                        sanitized_text=""
+                    )
+        elif packet.authority == AuthorityLevel.L3 and not packet.allowlist_confirmed:
             for pattern in self.COMMIT_VERBS:
                 if re.search(pattern, lower_text):
                     return CommitmentResult(
                         allowed=False,
-                        reason=f"L0 authority envelope forbids making bookings or binding commitments (matched '{pattern}').",
+                        reason="L3 authority requires explicit live approval for binding commitments.",
                         sanitized_text=""
                     )
 

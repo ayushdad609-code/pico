@@ -5,6 +5,7 @@ Handles contact resolution, Ask-First briefings, and initiating guarded phone ca
 
 import time
 import asyncio
+import concurrent.futures
 from typing import Dict, Any, Optional
 
 from .base_skill import BaseSkill, SkillResult
@@ -42,6 +43,19 @@ class TelephonySkill(BaseSkill):
         }
     }
 
+    def _run_async(self, coro):
+        """Safely execute an async coroutine from sync context without event loop conflicts."""
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = None
+
+        if loop and loop.is_running():
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                return pool.submit(asyncio.run, coro).result()
+        else:
+            return asyncio.run(coro)
+
     def execute(self, inputs: Dict[str, Any], context: Optional[Dict[str, Any]] = None) -> SkillResult:
         start_t = time.time()
         action = inputs.get("action", "resolve").lower()
@@ -51,19 +65,47 @@ class TelephonySkill(BaseSkill):
         try:
             if action == "resolve":
                 if not target:
-                    return SkillResult(success=False, error="Target contact or phone number required.", execution_time_s=time.time() - start_t)
-                # Run resolve_callee
-                callee = asyncio.run(resolve_callee(target))
+                    return SkillResult(
+                        success=False,
+                        skill_name=self.name,
+                        output=None,
+                        error="Target contact or phone number required.",
+                        execution_time_ms=round((time.time() - start_t) * 1000, 2)
+                    )
+                callee = self._run_async(resolve_callee(target))
                 if not callee:
-                    return SkillResult(success=False, error=f"Could not find contact '{target}'.", execution_time_s=time.time() - start_t)
-                return SkillResult(success=True, data=callee.to_dict(), execution_time_s=time.time() - start_t)
+                    return SkillResult(
+                        success=False,
+                        skill_name=self.name,
+                        output=None,
+                        error=f"Could not find contact '{target}'.",
+                        execution_time_ms=round((time.time() - start_t) * 1000, 2)
+                    )
+                return SkillResult(
+                    success=True,
+                    skill_name=self.name,
+                    output=callee.to_dict(),
+                    execution_time_ms=round((time.time() - start_t) * 1000, 2)
+                )
 
             elif action == "brief":
                 if not target:
-                    return SkillResult(success=False, error="Target contact or phone number required.", execution_time_s=time.time() - start_t)
-                callee = asyncio.run(resolve_callee(target))
+                    return SkillResult(
+                        success=False,
+                        skill_name=self.name,
+                        output=None,
+                        error="Target contact or phone number required.",
+                        execution_time_ms=round((time.time() - start_t) * 1000, 2)
+                    )
+                callee = self._run_async(resolve_callee(target))
                 if not callee:
-                    return SkillResult(success=False, error=f"Could not find contact '{target}'.", execution_time_s=time.time() - start_t)
+                    return SkillResult(
+                        success=False,
+                        skill_name=self.name,
+                        output=None,
+                        error=f"Could not find contact '{target}'.",
+                        execution_time_ms=round((time.time() - start_t) * 1000, 2)
+                    )
                 
                 auth_str = inputs.get("authority", "L0").upper()
                 authority = {
@@ -80,21 +122,54 @@ class TelephonySkill(BaseSkill):
                     allowlist_confirmed=True
                 )
                 card = build_briefing_card(packet)
-                return SkillResult(success=True, data=card, execution_time_s=time.time() - start_t)
+                return SkillResult(
+                    success=True,
+                    skill_name=self.name,
+                    output=card,
+                    execution_time_ms=round((time.time() - start_t) * 1000, 2)
+                )
 
             elif action == "dial":
                 phone_number = inputs.get("phone_number", target)
                 if not phone_number:
-                    return SkillResult(success=False, error="Phone number required for dial.", execution_time_s=time.time() - start_t)
+                    return SkillResult(
+                        success=False,
+                        skill_name=self.name,
+                        output=None,
+                        error="Phone number required for dial.",
+                        execution_time_ms=round((time.time() - start_t) * 1000, 2)
+                    )
                 
-                # Native call execution via termux-telephony-call
-                ok, out, err = asyncio.run(SafeCommandRunner.run(["termux-telephony-call", phone_number], timeout=2.0))
+                ok, out, err = self._run_async(SafeCommandRunner.run(["termux-telephony-call", phone_number], timeout=2.0))
                 if not ok:
-                    return SkillResult(success=False, error=f"Failed to initiate call: {err}", execution_time_s=time.time() - start_t)
-                return SkillResult(success=True, data={"dialed": phone_number, "status": "initiated"}, execution_time_s=time.time() - start_t)
+                    return SkillResult(
+                        success=False,
+                        skill_name=self.name,
+                        output=None,
+                        error=f"Failed to initiate call: {err}",
+                        execution_time_ms=round((time.time() - start_t) * 1000, 2)
+                    )
+                return SkillResult(
+                    success=True,
+                    skill_name=self.name,
+                    output={"dialed": phone_number, "status": "initiated"},
+                    execution_time_ms=round((time.time() - start_t) * 1000, 2)
+                )
 
             else:
-                return SkillResult(success=False, error=f"Unknown action: {action}", execution_time_s=time.time() - start_t)
+                return SkillResult(
+                    success=False,
+                    skill_name=self.name,
+                    output=None,
+                    error=f"Unknown action: {action}",
+                    execution_time_ms=round((time.time() - start_t) * 1000, 2)
+                )
 
         except Exception as e:
-            return SkillResult(success=False, error=str(e), execution_time_s=time.time() - start_t)
+            return SkillResult(
+                success=False,
+                skill_name=self.name,
+                output=None,
+                error=str(e),
+                execution_time_ms=round((time.time() - start_t) * 1000, 2)
+            )

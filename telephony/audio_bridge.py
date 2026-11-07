@@ -53,14 +53,15 @@ class AudioBridge:
         """Check if callee has interrupted current speech."""
         return self._interrupted
 
-    def flush_playback(self) -> int:
+    def flush_playback(self, reset_interrupted: bool = False) -> int:
         """
         Immediately drop and flush all pending/queued playback audio (<50ms cutoff).
         Returns the number of bytes purged.
         """
         flushed_bytes = len(self._playback_buffer)
         self._playback_buffer.clear()
-        self._interrupted = False
+        if reset_interrupted:
+            self._interrupted = False
         return flushed_bytes
 
     def _calculate_rms(self, pcm_frame: bytes) -> float:
@@ -70,7 +71,8 @@ class AudioBridge:
             return 0.0
 
         try:
-            samples = struct.unpack(f"<{sample_count}h", pcm_frame)
+            clean_bytes = pcm_frame[:sample_count * 2]
+            samples = struct.unpack(f"<{sample_count}h", clean_bytes)
             sum_squares = sum(s * s for s in samples)
             return math.sqrt(sum_squares / sample_count)
         except Exception:
@@ -115,7 +117,8 @@ class AudioBridge:
 
         # Speech detected from the other person
         if self.has_pending_audio():
-            # Interruption (barge-in) event!
+            # Interruption (barge-in) event! Instant flush (<50ms cutoff)
             self._interrupted = True
+            self.flush_playback()
 
         return True
