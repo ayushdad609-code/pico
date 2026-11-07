@@ -78,3 +78,33 @@ def test_api_telephony_twiml_endpoint():
         assert "<Response>" in body
         assert '<Stream url="ws://api.pico.ai/api/telephony/media-stream">' in body
     asyncio.run(_test())
+
+
+def test_api_chrome_and_gmail_endpoints():
+    async def _test():
+        server = PicoServer(":memory:")
+
+        # 1. Chrome Tabs GET
+        req_chrome_get = make_mocked_request("GET", "/api/events/chrome")
+        resp_chrome_get = await server.handle_chrome_tabs(req_chrome_get)
+        assert resp_chrome_get.status == 200
+        data_chrome = json.loads(resp_chrome_get.body.decode("utf-8"))
+        assert data_chrome["tab_count"] == 0
+
+        # 2. Chrome Tab POST
+        req_chrome_post = make_mocked_request("POST", "/api/events/chrome")
+        req_chrome_post._read_bytes = json.dumps({"url": "https://github.com/ayush/pico", "title": "Pico"}).encode("utf-8")
+        resp_chrome_post = await server.handle_chrome_tab_post(req_chrome_post)
+        assert resp_chrome_post.status == 200
+        post_data = json.loads(resp_chrome_post.body.decode("utf-8"))
+        assert post_data["success"] is True
+        assert post_data["tab"]["domain"] == "github.com"
+
+        # 3. Gmail GET (unconfigured)
+        req_gmail = make_mocked_request("GET", "/api/events/gmail")
+        resp_gmail = await server.handle_gmail_events(req_gmail)
+        assert resp_gmail.status == 200
+        data_gmail = json.loads(resp_gmail.body.decode("utf-8"))
+        assert data_gmail["configured"] is False
+    asyncio.run(_test())
+

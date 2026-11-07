@@ -20,6 +20,8 @@ from .watchers import PriceWatcherEngine
 from .tokens import TokenManager
 from .reports import SelfAnalysisEngine, DailyScorecard
 from .paths import get_default_db_path
+from .chrome_watcher import ChromeWatcher
+from .gmail_watcher import GmailWatcher, extract_events_from_message
 
 
 class PicoServer:
@@ -29,6 +31,8 @@ class PicoServer:
         self.pipeline = PipelineEngine(self.memory)
         self.watcher_engine = PriceWatcherEngine()
         self.token_manager = TokenManager()
+        self.chrome_watcher = ChromeWatcher()
+        self.gmail_watcher = GmailWatcher()
 
         # Seed default profile for user_001
         self.profile = OnboardingFlow.create_fast_path_profile(
@@ -63,6 +67,9 @@ class PicoServer:
         self.app.router.add_get("/api/telephony/twiml", self.handle_twiml)
         self.app.router.add_post("/api/telephony/twiml", self.handle_twiml)
         self.app.router.add_get("/api/telephony/media-stream", self.handle_media_stream)
+        self.app.router.add_get("/api/events/gmail", self.handle_gmail_events)
+        self.app.router.add_get("/api/events/chrome", self.handle_chrome_tabs)
+        self.app.router.add_post("/api/events/chrome", self.handle_chrome_tab_post)
 
     async def health_check(self, request):
         return web.json_response({
@@ -187,6 +194,46 @@ class PicoServer:
                 break
 
         return ws
+
+    async def handle_gmail_events(self, request):
+        if not self.gmail_watcher.is_configured():
+            return web.json_response({
+                "configured": False,
+                "message": "Gmail not configured. Set GMAIL_ADDRESS and GMAIL_APP_PASSWORD in .env"
+            })
+
+        emails = self.gmail_watcher.fetch_recent_emails(limit=5)
+        all_events = []
+        for em in emails:
+            for ev in extract_events_from_message(em):
+                all_events.append(ev.to_dict())
+
+        return web.json_response({
+            "configured": True,
+            "count": len(emails),
+            "events": all_events,
+            "emails": [em.to_dict() for em in emails]
+        })
+
+    async def handle_chrome_tabs(self, request):
+        summary = self.chrome_watcher.get_browsing_summary()
+        return web.json_response(summary)
+
+    async def handle_chrome_tab_post(self, request):
+        try:
+            data = await request.json()
+        except Exception:
+            return web.json_response({"error": "Invalid JSON"}, status=400)
+
+        url = data.get("url", "")
+        title = data.get("title", "")
+        if not url:
+            return web.json_response({"error": "URL required"}, status=400)
+
+        tab = self.chrome_watcher.record_tab(url=url, title=title)
+        self.chrome_watcher.sync_to_memory(self.memory, self.profile.user_id)
+        return web.json_response({"success": True, "tab": tab.to_dict()})
+
 
 
 def create_app():

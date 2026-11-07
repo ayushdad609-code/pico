@@ -170,8 +170,42 @@ class PipelineEngine:
             except Exception:
                 pass
 
+        user_msg_lower = user_message.lower()
+
+        # Check for Gmail query intent
+        if any(kw in user_msg_lower for kw in ["check my email", "check email", "check gmail", "unread email", "any new email"]):
+            try:
+                from .gmail_watcher import GmailWatcher
+                gw = GmailWatcher()
+                if not gw.is_configured():
+                    email_context = "[GMAIL CONTEXT]: Gmail is not yet configured. Set GMAIL_ADDRESS and GMAIL_APP_PASSWORD in .env."
+                else:
+                    emails = gw.fetch_recent_emails(limit=3)
+                    if emails:
+                        lines = [f"• From {em.sender}: '{em.subject}'" for em in emails]
+                        email_context = f"[RECENT GMAIL INBOX HIGHLIGHTS]:\n" + "\n".join(lines)
+                    else:
+                        email_context = "[GMAIL CONTEXT]: No new unread emails found."
+                research_context = f"{research_context}\n{email_context}" if research_context else email_context
+            except Exception:
+                pass
+
+        # Check for Chrome tabs query intent
+        if any(kw in user_msg_lower for kw in ["what tabs", "open tabs", "chrome tabs", "check tabs", "active tabs"]):
+            try:
+                from .chrome_watcher import ChromeWatcher
+                cw = ChromeWatcher()
+                summary = cw.get_browsing_summary()
+                if summary["tab_count"] > 0:
+                    domains = ", ".join(summary["top_domains"][:4])
+                    tab_context = f"[ACTIVE CHROME TABS]: {summary['tab_count']} tabs open. Primary focus: {summary['primary_category']}. Top domains: {domains}."
+                else:
+                    tab_context = "[CHROME TABS]: No active open tabs recorded."
+                research_context = f"{research_context}\n{tab_context}" if research_context else tab_context
+            except Exception:
+                pass
+
         if not research_context:
-            user_msg_lower = user_message.lower()
             search_intent = any(kw in user_msg_lower for kw in [
                 "search up", "search for", "look up", "going for", "current price",
                 "access browser", "nifty 50", "nifty50", "latest news"
