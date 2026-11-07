@@ -21,7 +21,7 @@ class CommitmentChecker:
     CARD_PATTERN = re.compile(r"\b(?:\d[ -]*?){13,19}\b")
     CVV_PATTERN = re.compile(r"\bcvv\b[:\s]*\d{3,4}", re.IGNORECASE)
     OTP_PATTERN = re.compile(r"\b(?:otp|verification code|one[- ]time password|auth code)\b[\w\s:]*\b\d{4,8}\b", re.IGNORECASE)
-    BANK_PASS_PATTERN = re.compile(r"\b(?:netbanking|password|upi pin|atm pin)\b[:\s]*\w+", re.IGNORECASE)
+    BANK_PASS_PATTERN = re.compile(r"\b(?:netbanking|password|upi pin|atm pin|pin is|security code)\b[:\s]*\w+", re.IGNORECASE)
 
     # 2. Binding Agreement Patterns (Forbidden at L0 & L1)
     COMMIT_VERBS = [

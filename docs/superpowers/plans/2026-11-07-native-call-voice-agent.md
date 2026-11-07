@@ -45,7 +45,7 @@
   - `async def resolve_callee(target: str, timeout: float = 2.0) -> Optional[CalleeInfo]`
   - `def normalize_phone_number(raw: str, default_country: str = "+91") -> str`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```python
 import pytest
@@ -64,21 +64,21 @@ async def test_resolve_callee_direct_number():
     assert info.name == "+919876543210"
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `pytest tests/test_contact_resolver.py -v`
 Expected: FAIL with "ModuleNotFoundError: No module named 'telephony'"
 
-- [ ] **Step 3: Implement `telephony/contact_resolver.py`**
+- [x] **Step 3: Implement `telephony/contact_resolver.py`**
 
 Implement contact query against `termux-contact-list` using `SafeCommandRunner` with timeout, fallback contact cache, and E.164 phone number cleaner.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `pytest tests/test_contact_resolver.py -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add telephony/__init__.py telephony/contact_resolver.py tests/test_contact_resolver.py
@@ -100,7 +100,7 @@ git commit -m "feat(telephony): implement contact resolver and phone normalizer"
   - `class FactsPacket(callee: CalleeInfo, objective: str, authority: AuthorityLevel, budget_ceiling: Optional[float], red_lines: list[str], allowed_facts: dict)`
   - `def build_briefing_card(packet: FactsPacket) -> dict`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```python
 import pytest
@@ -123,21 +123,21 @@ def test_facts_packet_creation_and_briefing():
     assert len(card["buttons"]) == 3
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `pytest tests/test_call_briefing.py -v`
 Expected: FAIL with "ModuleNotFoundError" or "ImportError"
 
-- [ ] **Step 3: Implement `telephony/briefing.py`**
+- [x] **Step 3: Implement `telephony/briefing.py`**
 
 Define `AuthorityLevel`, `FactsPacket` dataclass, and `build_briefing_card` helper with Telegram interactive button structures (`[Confirm & Call]`, `[Edit Details]`, `[Cancel]`).
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `pytest tests/test_call_briefing.py -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add telephony/briefing.py tests/test_call_briefing.py
@@ -158,7 +158,7 @@ git commit -m "feat(telephony): add FactsPacket, AuthorityEnvelope and briefing 
   - `class CommitmentResult(allowed: bool, reason: str, sanitized_text: str)`
   - `class CommitmentChecker.verify_utterance(text: str, packet: FactsPacket) -> CommitmentResult`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```python
 import pytest
@@ -183,21 +183,21 @@ def test_commitment_checker_blocks_unauthorized_booking():
     assert "L0 authority" in result.reason
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `pytest tests/test_commitment_checker.py -v`
 Expected: FAIL
 
-- [ ] **Step 3: Implement `telephony/commitment_checker.py`**
+- [x] **Step 3: Implement `telephony/commitment_checker.py`**
 
 Implement strict regex & semantic rules checking for commitments (confirm, agree, book, pay), OTP/CVV disclosures, budget ceiling overflows, and red line violations.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `pytest tests/test_commitment_checker.py -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add telephony/commitment_checker.py tests/test_commitment_checker.py
@@ -221,7 +221,7 @@ git commit -m "feat(telephony): implement code-side CommitmentChecker"
   - `AudioBridge.flush_playback() -> int (flushed_ms)`
   - `AudioBridge.is_interrupted() -> bool`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```python
 import pytest
@@ -245,21 +245,21 @@ def test_audio_bridge_instant_interruption_flush():
     assert bridge.has_pending_audio() is False
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `pytest tests/test_audio_bridge.py -v`
 Expected: FAIL
 
-- [ ] **Step 3: Implement `telephony/audio_bridge.py`**
+- [x] **Step 3: Implement `telephony/audio_bridge.py`**
 
 Implement `AudioBridge` with energy/Silero VAD, active speaker state tracking, AEC reference subtractor (to avoid self-echo triggers), and atomic buffer flushing (<50ms).
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `pytest tests/test_audio_bridge.py -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add telephony/audio_bridge.py tests/test_audio_bridge.py
@@ -282,7 +282,7 @@ git commit -m "feat(telephony): add AudioBridge with instant barge-in interrupti
   - `async def CallSession.handle_incoming_transcript(caller_text: str) -> str`
   - `async def CallSession.request_mid_call_decision(question: str, timeout: float = 30.0) -> Optional[str]`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```python
 import pytest
@@ -308,21 +308,21 @@ async def test_crbt_waits_for_human_greeting():
     assert len(reply) > 0
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `pytest tests/test_call_session.py -v`
 Expected: FAIL
 
-- [ ] **Step 3: Implement `telephony/call_session.py`**
+- [x] **Step 3: Implement `telephony/call_session.py`**
 
 Implement state machine, Indian CRBT detection filter, stall phrase scheduler (*"One second, let me check that note..."*), comfort phrases during hold, and mid-call decision future bridge.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `pytest tests/test_call_session.py -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add telephony/call_session.py tests/test_call_session.py
@@ -346,7 +346,7 @@ git commit -m "feat(telephony): implement CallSession with CRBT detection and mi
   - `async def TelegramCallBridge.trigger_mid_call_ping(session: CallSession, question: str, options: list[str])`
   - `async def TelegramCallBridge.emergency_abort(session: CallSession)`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```python
 import pytest
@@ -370,21 +370,21 @@ def test_telegram_live_summary_formatting():
     assert any("End Call Now" in b["text"] for row in buttons for b in row)
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `pytest tests/test_call_telegram_bridge.py -v`
 Expected: FAIL
 
-- [ ] **Step 3: Implement `telephony/telegram_bridge.py`**
+- [x] **Step 3: Implement `telephony/telegram_bridge.py`**
 
 Format live Telegram cards, provide debounce/rate limiting for in-flight message edits, handle `[End Call Now]` callback, and format post-call final transcripts.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `pytest tests/test_call_telegram_bridge.py -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add telephony/telegram_bridge.py tests/test_call_telegram_bridge.py
@@ -404,7 +404,7 @@ git commit -m "feat(telephony): implement Telegram live summary streaming card a
 - Consumes: All `telephony` modules
 - Produces: Complete end-to-end test suite proving all 5 scenarios pass cleanly.
 
-- [ ] **Step 1: Write the failing golden tests**
+- [x] **Step 1: Write the failing golden tests**
 
 Write golden scenarios:
 1. Normal call with Dad ("Dinner at 8:30").
@@ -413,21 +413,21 @@ Write golden scenarios:
 4. Indian CRBT caller tune delay before human greeting.
 5. Mid-call unbriefed question with Telegram Ping Card timeout default.
 
-- [ ] **Step 2: Run test to verify failure/missing wiring**
+- [x] **Step 2: Run test to verify failure/missing wiring**
 
 Run: `pytest tests/test_call_agent_golden.py -v`
 Expected: FAIL
 
-- [ ] **Step 3: Wire into `skills/device_skill.py` and implement golden harness**
+- [x] **Step 3: Wire into `skills/device_skill.py` and implement golden harness**
 
 Expose `make_phone_call` skill in `skills/device_skill.py` and complete any missing glue code.
 
-- [ ] **Step 4: Run full test suite to verify 100% pass**
+- [x] **Step 4: Run full test suite to verify 100% pass**
 
 Run: `pytest tests/test_contact_resolver.py tests/test_call_briefing.py tests/test_commitment_checker.py tests/test_audio_bridge.py tests/test_call_session.py tests/test_call_telegram_bridge.py tests/test_call_agent_golden.py -v`
 Expected: ALL PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add skills/device_skill.py skills/registry.py tests/test_call_agent_golden.py

@@ -91,6 +91,7 @@ def run_interactive_cli():
     print("  /script <text>     - Run Script Doctor & Hook Reviewer")
     print("  /macros [w] [h]    - Run TDEE & Macro Nutrition Calculator")
     print("  /browse <url>      - Cloud Browser Agent: read web pages cleanly")
+    print("  /call <name> [msg] - Prepare and dial guarded phone call")
     print("  /tokens            - View token meter & Low Power status")
     print("  /lockin            - Toggle Lock In Mode 🔒")
     print("  /mode <name>       - Manually change outfit/mode (e.g. /mode gym)")
@@ -339,6 +340,39 @@ def run_interactive_cli():
                     print(f"  💬 \"{out['his_line']}\"")
                 else:
                     print(f"\n⚠️ Browser error: {res.error}")
+                continue
+
+            if user_msg.startswith("/call"):
+                parts = user_msg.split(maxsplit=2)
+                if len(parts) < 2:
+                    print("\n📞 Usage: /call <contact_or_number> [message]")
+                    print("  Example: /call dad tell him I'll be home late")
+                    continue
+                target_arg = parts[1]
+                obj_arg = parts[2] if len(parts) > 2 else "Deliver update on Ayush's behalf"
+                res = skill_registry.execute_skill("telephony_skill", {
+                    "action": "brief",
+                    "target": target_arg,
+                    "objective": obj_arg,
+                    "authority": "L0"
+                })
+                if res.success:
+                    card = res.output
+                    print(f"\n📋 [Pre-Call Briefing Card]:\n{card['text']}")
+                    confirm = input("\nConfirm and place call via SIM? [y/N]: ").strip().lower()
+                    if confirm in ["y", "yes"]:
+                        dial_res = skill_registry.execute_skill("telephony_skill", {
+                            "action": "dial",
+                            "phone_number": card["callee"]["phone_number"]
+                        })
+                        if dial_res.success:
+                            print(f"\n📱 Pico dialed {card['callee']['name']} ({card['callee']['phone_number']}) via SIM!")
+                        else:
+                            print(f"\n⚠️ Dial failed: {dial_res.error}")
+                    else:
+                        print("\n❌ Call cancelled.")
+                else:
+                    print(f"\n⚠️ Could not prepare call: {res.error}")
                 continue
 
             if user_msg == "/tokens":

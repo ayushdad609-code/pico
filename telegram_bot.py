@@ -41,6 +41,10 @@ from pico.mcp_host import MCPHost
 from pico.heartbeat import HeartbeatRunner, HeartbeatOutcome
 from pico.scheduled import ScheduledWorkRegistry
 from pico.paths import get_pico_home, get_default_db_path
+from telephony.contact_resolver import resolve_callee, CalleeInfo
+from telephony.briefing import AuthorityLevel, FactsPacket, build_briefing_card
+from telephony.call_session import CallSession, CallStatus
+from telephony.telegram_bridge import TelegramCallBridge
 
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -164,6 +168,29 @@ class TelegramApiClient:
             payload["text"] = text
         await self._request("answerCallbackQuery", payload)
 
+    async def edit_message_text(
+        self,
+        chat_id: int,
+        message_id: int,
+        text: str,
+        parse_mode: Optional[str] = None,
+        reply_markup: Optional[Dict[str, Any]] = None
+    ) -> Optional[Dict[str, Any]]:
+        payload: Dict[str, Any] = {
+            "chat_id": chat_id,
+            "message_id": message_id,
+            "text": text,
+        }
+        if parse_mode:
+            payload["parse_mode"] = parse_mode
+        if reply_markup:
+            payload["reply_markup"] = reply_markup
+        res = await self._request("editMessageText", payload)
+        if not res and parse_mode:
+            payload.pop("parse_mode", None)
+            res = await self._request("editMessageText", payload)
+        return res.get("result") if res else None
+
 
 class PicoTelegramBot:
     """The complete Telegram Bot backend for Pico."""
@@ -189,6 +216,9 @@ class PicoTelegramBot:
         self.pending_agent_tasks: Dict[int, Dict[str, Any]] = {}
         self.pending_skill_proposals: Dict[int, Dict[str, Any]] = {}
         self.pending_actions: Dict[str, Dict[str, Any]] = {}
+        self.pending_call_briefings: Dict[Any, Dict[str, Any]] = {}
+        self.active_call_sessions: Dict[str, CallSession] = {}
+        self.call_bridges: Dict[str, TelegramCallBridge] = {}
         self.active_handoff_chat_id: Optional[int] = None
         self.user_modes: Dict[int, str] = {}
         self.user_profiles: Dict[int, UserProfile] = {}
@@ -287,6 +317,31 @@ class PicoTelegramBot:
 
         # Send typing action
         await self.api.send_chat_action(chat_id, "typing")
+
+        # Check if chat is awaiting objective for a pending call briefing
+        if chat_id in self.pending_call_briefings and self.pending_call_briefings[chat_id].get("stage") == "awaiting_objective":
+            pending = self.pending_call_briefings.pop(chat_id)
+            callee = pending["callee"]
+            objective = text_clean
+            packet = FactsPacket(
+                callee=callee,
+                objective=objective,
+                authority=AuthorityLevel.L0,
+                allowlist_confirmed=True
+            )
+            card = build_briefing_card(packet)
+            self.pending_call_briefings[packet.call_id] = {
+                "packet": packet,
+                "chat_id": chat_id
+            }
+            btn_rows = [[card["buttons"][0]], [card["buttons"][1], card["buttons"][2]]] if len(card["buttons"]) == 3 else [card["buttons"]]
+            await self.api.send_message(
+                chat_id,
+                card["text"],
+                parse_mode="HTML",
+                reply_markup={"inline_keyboard": btn_rows}
+            )
+            return
 
         # 1. /start or Help
         if text_clean in ["/start", "start", "/help", "help"]:
@@ -455,6 +510,7 @@ class PicoTelegramBot:
                 "• 🛍️ `/scrape [url|query]` — Live web item & price scraper with min/max analytics\n"
                 "• ⏰ `/schedule [HH:MM task]` — Autonomous background schedule manager\n"
                 "• 🎯 `/watch [symbol] [level]` — Real-time Binance crypto price watcher\n"
+                "• 📞 `/call <contact> [message]` — Autonomous phone call agent with live summary & barge-in\n"
                 "• 🛠️ `/agent <task>` — Autonomous multi-step problem solver\n"
             )
 
@@ -856,6 +912,74 @@ class PicoTelegramBot:
             await self.api.send_message(chat_id, reply)
             return
 
+        # 14c. Outbound Telephony Call Agent (/call, "call <name>", "pico call <name>")
+        call_match = None
+        if text_clean.startswith("/call"):
+            remainder = text_clean[5:].strip()
+            if remainder:
+                parts = remainder.split(maxsplit=1)
+                t_arg = parts[0]
+                obj_arg = parts[1] if len(parts) > 1 else ""
+                call_match = (t_arg, obj_arg)
+            else:
+                await self.api.send_message(
+                    chat_id,
+                    "📞 **Pico Phone Call Agent**\n\n"
+                    "Usage: `/call <contact_or_number> [message]`\n\n"
+                    "Examples:\n"
+                    "• `/call dad`\n"
+                    "• `/call mom tell her I'll be late for dinner`\n"
+                    "• `/call +919876543210 ask about booking`\n\n"
+                    "Or just say: *\"pico call dad\"*!"
+                )
+                return
+        else:
+            m = re.match(r"^(?:pico,?\s+)?call\s+([\w\+\d]+)(?:\s+(?:and\s+|to\s+)?(.+))?$", text_clean, re.IGNORECASE)
+            if m:
+                call_match = (m.group(1).strip(), (m.group(2) or "").strip())
+
+        if call_match:
+            target_name, objective = call_match
+            callee = await resolve_callee(target_name)
+            if not callee:
+                await self.api.send_message(
+                    chat_id,
+                    f"⚠️ Could not find contact or valid phone number for '{target_name}'."
+                )
+                return
+
+            if not objective:
+                self.pending_call_briefings[chat_id] = {
+                    "callee": callee,
+                    "stage": "awaiting_objective"
+                }
+                await self.api.send_message(
+                    chat_id,
+                    f"📞 **Setting up call with {callee.name} ({callee.phone_number})**\n\n"
+                    f"What should I tell or ask {callee.name}, and what are my limits?"
+                )
+                return
+            else:
+                packet = FactsPacket(
+                    callee=callee,
+                    objective=objective,
+                    authority=AuthorityLevel.L0,
+                    allowlist_confirmed=True
+                )
+                card = build_briefing_card(packet)
+                self.pending_call_briefings[packet.call_id] = {
+                    "packet": packet,
+                    "chat_id": chat_id
+                }
+                btn_rows = [[card["buttons"][0]], [card["buttons"][1], card["buttons"][2]]] if len(card["buttons"]) == 3 else [card["buttons"]]
+                await self.api.send_message(
+                    chat_id,
+                    card["text"],
+                    parse_mode="HTML",
+                    reply_markup={"inline_keyboard": btn_rows}
+                )
+                return
+
         # 15. Default: Run Full 7-Step Pipeline
         res = self.pipeline.run(
             user_message=text_clean,
@@ -890,6 +1014,99 @@ class PicoTelegramBot:
 
         if not chat_id:
             await self.api.answer_callback_query(cb_id)
+            return
+
+        # Telephony Confirm Call Callback
+        if data.startswith("confirm_call_"):
+            call_id = data.replace("confirm_call_", "")
+            pending = self.pending_call_briefings.pop(call_id, None)
+            if not pending:
+                await self.api.answer_callback_query(cb_id, text="Call briefing not found or expired.")
+                return
+
+            packet = pending["packet"]
+            await self.api.answer_callback_query(cb_id, text=f"Dialing {packet.callee.name}... 📞")
+
+            # Execute dial through TelephonySkill
+            self.skill_registry.execute_skill("telephony_skill", {
+                "action": "dial",
+                "phone_number": packet.callee.phone_number
+            })
+
+            session = CallSession(packet=packet)
+            bridge = TelegramCallBridge(bot=self.api, chat_id=chat_id)
+            self.active_call_sessions[packet.call_id] = session
+            self.call_bridges[packet.call_id] = bridge
+
+            # Post the live streaming summary card
+            await bridge.post_call_started(session)
+            await self.api.send_message(
+                chat_id,
+                f"📱 **Pico dialed {packet.callee.name} via SIM!**\n"
+                f"Live status card is updating above. Tap **🚨 End Call Now** at any moment to immediately hang up."
+            )
+            return
+
+        # Telephony Cancel Call Callback
+        if data.startswith("cancel_call_"):
+            call_id = data.replace("cancel_call_", "")
+            pending = self.pending_call_briefings.pop(call_id, None)
+            name = pending["packet"].callee.name if pending else "Call"
+            await self.api.answer_callback_query(cb_id, text="Call cancelled ❌")
+            await self.api.send_message(chat_id, f"❌ **{name} call cancelled.** Kept safe!")
+            return
+
+        # Telephony Edit Call Callback
+        if data.startswith("edit_call_"):
+            call_id = data.replace("edit_call_", "")
+            pending = self.pending_call_briefings.get(call_id)
+            if pending:
+                callee = pending["packet"].callee
+                self.pending_call_briefings[chat_id] = {"callee": callee, "stage": "awaiting_objective"}
+                await self.api.answer_callback_query(cb_id, text="Edit details")
+                await self.api.send_message(
+                    chat_id,
+                    f"📝 What should be the updated message or limits for {callee.name}?"
+                )
+            else:
+                await self.api.answer_callback_query(cb_id, text="Briefing not found.")
+            return
+
+        # Telephony Emergency Abort Callback
+        if data.startswith("abort_call_"):
+            call_id = data.replace("abort_call_", "")
+            session = self.active_call_sessions.get(call_id)
+            bridge = self.call_bridges.get(call_id) or TelegramCallBridge(bot=self.api, chat_id=chat_id)
+            if session:
+                await self.api.answer_callback_query(cb_id, text="Emergency Abort Activated! 🚨")
+                abort_msg = await bridge.emergency_abort(session)
+                await bridge.update_live_summary(session)
+                await self.api.send_message(chat_id, f"🚨 **EMERGENCY TAKEOVER:** {abort_msg}")
+                await bridge.post_final_report(session)
+                self.active_call_sessions.pop(call_id, None)
+                self.call_bridges.pop(call_id, None)
+            else:
+                await self.api.answer_callback_query(cb_id, text="Call already ended.")
+            return
+
+        # Telephony Mid-Call Decision Callback
+        if data.startswith("call_decide_"):
+            parts = data.split("_")
+            if len(parts) >= 4:
+                call_id = parts[2]
+                idx = int(parts[3])
+                session = self.active_call_sessions.get(call_id)
+                bridge = self.call_bridges.get(call_id)
+                default_opts = ["Yes, proceed", "No, decline", "Call me directly"]
+                decision_text = default_opts[idx] if idx < len(default_opts) else "User selected option"
+                if session:
+                    session.provide_user_decision(decision_text)
+                    await self.api.answer_callback_query(cb_id, text=f"Delivered: {decision_text} ✅")
+                    await self.api.send_message(chat_id, f"⚡ **Decision Delivered to Pico on the line:** *\"{decision_text}\"*")
+                    if bridge:
+                        await bridge.update_live_summary(session)
+                else:
+                    await self.api.answer_callback_query(cb_id, text="Call session ended.")
             return
 
         # Outfit change callback

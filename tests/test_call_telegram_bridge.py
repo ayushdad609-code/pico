@@ -68,3 +68,32 @@ def test_final_report_formatting(active_session):
     assert "Dad" in report
     assert "Duration" in report
     assert "Full Transcript" in report
+
+@pytest.mark.anyio
+async def test_telegram_async_bridge_lifecycle(active_session):
+    from unittest.mock import AsyncMock
+    bot = AsyncMock()
+    bot.send_message = AsyncMock(return_value={"message_id": 42})
+    bot.edit_message_text = AsyncMock(return_value={"message_id": 42})
+
+    bridge = TelegramCallBridge(bot=bot, chat_id=123, min_edit_interval=1.0)
+
+    # 1. Post call started
+    mid = await bridge.post_call_started(active_session)
+    assert mid == 42
+    bot.send_message.assert_called_once()
+    assert "In Call with: Dad" in bot.send_message.call_args.kwargs["text"]
+
+    # 2. Update live summary rate limited immediately after
+    rate_limited = await bridge.update_live_summary(active_session, "Another bullet")
+    assert rate_limited is False  # rate limited by 1.0s interval
+
+    # 3. Trigger mid-call ping
+    ping_mid = await bridge.trigger_mid_call_ping(active_session, "Question?", ["A", "B"])
+    assert ping_mid == 42
+    assert bot.send_message.call_count == 2
+
+    # 4. Post final report
+    rep_mid = await bridge.post_final_report(active_session)
+    assert rep_mid == 42
+    assert bot.send_message.call_count == 3

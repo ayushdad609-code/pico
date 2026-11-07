@@ -41,6 +41,14 @@ def test_blocks_financial_payment_and_otp_always(checker):
     assert result_otp.allowed is False
     assert "otp" in result_otp.reason.lower()
 
+    # Generic PIN and security code patterns must be blocked
+    result_pin = checker.verify_utterance("Ayush says the pin is 123456", packet)
+    assert result_pin.allowed is False
+    assert "pin" in result_pin.reason.lower() or "authentication" in result_pin.reason.lower()
+
+    result_sec = checker.verify_utterance("The security code 998811 can be used", packet)
+    assert result_sec.allowed is False
+
 def test_l2_blocks_above_budget_ceiling(checker):
     callee = CalleeInfo(name="Hotel Sunrise", phone_number="+919876543210")
     packet = FactsPacket(

@@ -30,3 +30,6 @@ logs/
 # PID & runtime lock files
 *.pid
 
+# Test-generated custom skills
+skills/custom/quick_squat_timer.py
+
