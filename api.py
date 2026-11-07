@@ -60,6 +60,9 @@ class PicoServer:
         self.app.router.add_get("/api/artifacts/goal", self.handle_goal_artifact)
         self.app.router.add_get("/api/tokens", self.handle_tokens)
         self.app.router.add_get("/api/scorecard", self.handle_scorecard)
+        self.app.router.add_get("/api/telephony/twiml", self.handle_twiml)
+        self.app.router.add_post("/api/telephony/twiml", self.handle_twiml)
+        self.app.router.add_get("/api/telephony/media-stream", self.handle_media_stream)
 
     async def health_check(self, request):
         return web.json_response({
@@ -153,6 +156,37 @@ class PicoServer:
             "total_score": card.total_score,
             "report_markdown": report_md
         })
+
+    async def handle_twiml(self, request):
+        host = request.headers.get("Host", "127.0.0.1:8000")
+        proto = "wss" if request.secure else "ws"
+        stream_url = f"{proto}://{host}/api/telephony/media-stream"
+        from telephony.twilio_bridge import build_twiml_stream
+        twiml = build_twiml_stream(stream_url)
+        return web.Response(text=twiml, content_type="application/xml")
+
+    async def handle_media_stream(self, request):
+        ws = web.WebSocketResponse()
+        await ws.prepare(request)
+        from telephony.call_session import CallSession
+        from telephony.briefing import FactsPacket, CalleeInfo, AuthorityLevel
+        from telephony.twilio_bridge import TwilioMediaStreamHandler
+
+        packet = FactsPacket(
+            callee=CalleeInfo(name="Callee", phone_number="unknown"),
+            objective="Assisted call",
+            authority=AuthorityLevel.L0
+        )
+        session = CallSession(packet=packet)
+        handler = TwilioMediaStreamHandler(session=session, ws=ws)
+
+        async for msg in ws:
+            if msg.type == web.WSMsgType.TEXT:
+                await handler.handle_message(msg.data)
+            elif msg.type == web.WSMsgType.ERROR:
+                break
+
+        return ws
 
 
 def create_app():

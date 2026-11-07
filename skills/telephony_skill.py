@@ -130,6 +130,7 @@ class TelephonySkill(BaseSkill):
                 )
 
             elif action == "dial":
+                import os
                 phone_number = inputs.get("phone_number", target)
                 if not phone_number:
                     return SkillResult(
@@ -140,21 +141,43 @@ class TelephonySkill(BaseSkill):
                         execution_time_ms=round((time.time() - start_t) * 1000, 2)
                     )
                 
-                ok, out, err = self._run_async(SafeCommandRunner.run(["termux-telephony-call", phone_number], timeout=2.0))
-                if not ok:
+                backend = inputs.get("backend") or os.getenv("TELEPHONY_BACKEND", "native")
+                if backend.lower() == "twilio":
+                    from telephony.twilio_bridge import TwilioCallManager
+                    twiml_url = inputs.get("twiml_url") or os.getenv("TWILIO_TWIML_URL", "")
+                    manager = TwilioCallManager()
+                    try:
+                        res = self._run_async(manager.initiate_call(to_number=phone_number, twiml_url=twiml_url))
+                        return SkillResult(
+                            success=True,
+                            skill_name=self.name,
+                            output={"dialed": phone_number, "status": "initiated", "backend": "twilio", "call_sid": res.get("sid")},
+                            execution_time_ms=round((time.time() - start_t) * 1000, 2)
+                        )
+                    except Exception as e:
+                        return SkillResult(
+                            success=False,
+                            skill_name=self.name,
+                            output=None,
+                            error=f"Twilio call failed: {e}",
+                            execution_time_ms=round((time.time() - start_t) * 1000, 2)
+                        )
+                else:
+                    ok, out, err = self._run_async(SafeCommandRunner.run(["termux-telephony-call", phone_number], timeout=2.0))
+                    if not ok:
+                        return SkillResult(
+                            success=False,
+                            skill_name=self.name,
+                            output=None,
+                            error=f"Failed to initiate call: {err}",
+                            execution_time_ms=round((time.time() - start_t) * 1000, 2)
+                        )
                     return SkillResult(
-                        success=False,
+                        success=True,
                         skill_name=self.name,
-                        output=None,
-                        error=f"Failed to initiate call: {err}",
+                        output={"dialed": phone_number, "status": "initiated", "backend": "native"},
                         execution_time_ms=round((time.time() - start_t) * 1000, 2)
                     )
-                return SkillResult(
-                    success=True,
-                    skill_name=self.name,
-                    output={"dialed": phone_number, "status": "initiated"},
-                    execution_time_ms=round((time.time() - start_t) * 1000, 2)
-                )
 
             else:
                 return SkillResult(

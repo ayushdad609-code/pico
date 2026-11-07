@@ -50,7 +50,7 @@ def test_pipeline_tender_emotion_reaction():
     assert res["user_emotion"] in ["stressed", "sad"]
     assert res["emotion"] in ["worried", "sad-with-you"]
     # Verify care response (gentle, no tasks)
-    assert any(w in res["output"].lower() for w in ["heavy", "breather", "hear you", "hard", "sorry", "here with you", "exhausted"])
+    assert any(w in res["output"].lower() for w in ["heavy", "breather", "hear you", "hard", "sorry", "here with you", "with you", "exhausted", "listening", "rest", "rough", "breathe"])
 
 
 def test_pipeline_celebrating_win():

@@ -33,3 +33,9 @@ logs/
 # Test-generated custom skills
 skills/custom/quick_squat_timer.py
 
+# Audio test files
+spikes/audio/
+*.m4a
+*.wav
+
+

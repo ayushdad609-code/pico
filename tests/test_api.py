@@ -65,3 +65,16 @@ def test_api_routine_day_path_endpoint():
         assert "day_path" in data
         assert len(data["day_path"]) >= 5
     asyncio.run(_test())
+
+
+def test_api_telephony_twiml_endpoint():
+    async def _test():
+        server = PicoServer(":memory:")
+        req = make_mocked_request("GET", "/api/telephony/twiml", headers={"Host": "api.pico.ai"})
+        resp = await server.handle_twiml(req)
+        assert resp.status == 200
+        assert resp.content_type == "application/xml"
+        body = resp.body.decode("utf-8")
+        assert "<Response>" in body
+        assert '<Stream url="ws://api.pico.ai/api/telephony/media-stream">' in body
+    asyncio.run(_test())
