@@ -18,6 +18,7 @@ from .packing_checklist import PackingChecklistSkill
 from .browser_skill import BrowserSkill
 from .price_scraper_skill import ItemPriceScraperSkill
 from .device_skill import DeviceSkill
+from .telephony_skill import TelephonySkill
 from .coding_tools import (
     ReadFileSkill,
     WriteFileSkill,
@@ -65,6 +66,7 @@ class SkillRegistry:
         self.register_skill(ItemPriceScraperSkill())
         # 10. Android Hardware & Device Sensors
         self.register_skill(DeviceSkill())
+        self.register_skill(TelephonySkill())
         # 11-16. Claude Code Filesystem & Terminal Primitives
         self.register_skill(ReadFileSkill())
         self.register_skill(WriteFileSkill())

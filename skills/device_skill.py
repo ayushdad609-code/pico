@@ -39,6 +39,10 @@ class DeviceSkill(BaseSkill):
             elif action == "launch_app":
                 app_name = inputs.get("app_name", "")
                 res = self._launch_app(app_name)
+            elif action in ["call", "phone_call"]:
+                from skills.telephony_skill import TelephonySkill
+                tel_skill = TelephonySkill()
+                return tel_skill.execute(inputs, context)
             else:
                 res = self._get_full_status()
 
