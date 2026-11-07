@@ -49,6 +49,7 @@ class CallSession:
         self.status: CallStatus = CallStatus.WAITING_HUMAN
         self.start_time: float = time.time()
         self.end_time: Optional[float] = None
+        self.end_reason: Optional[str] = None
         
         self.transcript: List[Dict[str, Any]] = []
         self.summary_bullets: List[str] = []
@@ -115,6 +116,18 @@ class CallSession:
                 "text": caller_clean,
                 "timestamp": time.time()
             })
+            
+            from telephony.outcome_verifier import handle_robot_inquiry
+            robot_disclosure = handle_robot_inquiry(caller_clean, user_name=self.user_name)
+            if robot_disclosure:
+                self.transcript.append({
+                    "role": "assistant",
+                    "text": robot_disclosure,
+                    "timestamp": time.time()
+                })
+                self.add_summary_bullet("Pico confirmed AI identity upon inquiry.")
+                return robot_disclosure
+
             response = f"Understood, thank you. Regarding {self.packet.objective}, I will note that down."
             self.transcript.append({
                 "role": "assistant",
@@ -209,4 +222,5 @@ class CallSession:
         """Conclude the call session."""
         self.status = CallStatus.ENDED
         self.end_time = time.time()
+        self.end_reason = reason
         self.add_summary_bullet(f"Call ended ({reason}).")
