@@ -17,6 +17,10 @@
 - Never process credit card payments, OTPs, or bank secrets on calls.
 - Total speech conversational reply latency must target <= 1.2s using Groq Llama 3.1 8B Instant.
 - Audio interruption (barge-in) buffer flush must execute in < 50ms upon detecting callee speech.
+- Mandatory Opening AI Disclosure: Agent must identify as an AI assistant calling on Ayush's behalf within the first sentence (Doc 29/33/35 rule).
+- Mid-Call Ping Timeouts: Restored from Doc 33 to 45s for factual queries, 60s for binding financial/approval requests (Doc 35 §5 #2).
+- Contact Minimization & Allowlist: `termux-contact-list` matches only the requested callee; full address book is never loaded into LLM context (Doc 35 §4). Personal contacts (e.g. Dad) require explicit allowlist check.
+- Outcome Verifier: Task wrap-up must verify confirmation codes or SMS receipts; "booked" is never claimed based on agent impression alone (Doc 35 §6).
 
 ## Review Focus
 - CRBT (Caller Ringback Tune) / Music before pick-up: Pipeline must not interpret caller music as speech; must gate opening dialogue on human greeting.
