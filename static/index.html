@@ -2,695 +2,583 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>Pico — Companion Engine</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pico Companion</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/style.css">
 </head>
-<body>
-  <!-- Master Navigation Bar with View Switcher (Zero Emojis) -->
-  <nav class="master-nav">
-    <div class="nav-wrapper">
-      <div class="nav-brand">
-        <span class="nav-logo-text">pico</span>
+<body class="pico-body">
+
+  <!-- ========================================= -->
+  <!-- STEALTH SCREEN / DUO HERO (Boss Key Cover)-->
+  <!-- ========================================= -->
+  <div id="stealth-screen" class="duo-hero stealth-screen hidden">
+    <div class="stealth-inner">
+      <div class="stealth-left">
+        <img src="/static/pico_pointing_transparent.png" alt="Pico mascot" class="stealth-mascot" id="stealth-mascot">
       </div>
-
-      <!-- View Switcher Tabs -->
-      <div class="view-switcher" role="tablist">
-        <button class="switcher-btn active" data-target="duolingo" role="tab" aria-selected="true">
-          <span class="sw-text">Duolingo</span>
-        </button>
-        <button class="switcher-btn" data-target="chat" role="tab" aria-selected="false">
-          <span class="sw-text">Chat</span>
-        </button>
-        <button class="switcher-btn" data-target="settings" role="tab" aria-selected="false">
-          <span class="sw-text">Settings</span>
-        </button>
-      </div>
-
-      <div class="nav-status">
-        <span class="status-dot"></span>
-        <span class="status-name">Online</span>
-      </div>
-    </div>
-  </nav>
-
-  <!-- =========================================================================
-       PAGE 1: AUTHENTIC DUOLINGO FRONTPAGE (HERO ONLY, CLEAN & MINIMAL)
-       ========================================================================= -->
-  <section class="page-view active" id="view-duolingo">
-    <!-- Duolingo Hero Section -->
-    <section class="duo-hero">
-      <div class="duo-container duo-hero-grid">
-        <!-- Pointing Pico Mascot Presentation -->
-        <div class="duo-hero-graphic">
-          <div class="pico-mascot-container" id="pico-mascot-click">
-            <img 
-              src="/static/pico_pointing_transparent.png" 
-              alt="Pico Companion Mascot pointing at Get Started" 
-              class="pico-hero-img"
-              draggable="false"
-            >
-          </div>
-        </div>
-
-        <!-- Duolingo Hero Copy & 3D CTAs with Magic UI Border Beam -->
-        <div class="duo-hero-text bento-glow-card">
-          <div class="border-beam"></div>
-          <h1 class="duo-headline">
-            The free, fun, and effective way to master your daily momentum!
-          </h1>
-          <div class="duo-cta-box">
-            <button class="duo-btn duo-btn-primary" id="btn-duo-get-started">
-              GET STARTED
-            </button>
-            <button class="duo-btn duo-btn-secondary" id="btn-duo-login">
-              I ALREADY HAVE AN ACCOUNT
-            </button>
-          </div>
-        </div>
-      </div>
-    </section>
-  </section>
-
-  <!-- =========================================================================
-       PAGE 2: AUTHENTIC META MUSE CHAT & WORKSPACE
-       ========================================================================= -->
-  <section class="page-view" id="view-chat">
-    <div class="muse-chat-layout">
-      <!-- Muse Sidebar: Minimal Navigation (Zero Emojis) -->
-      <aside class="muse-sidebar">
-        <div class="sidebar-top">
-          <div class="sidebar-nav-list">
-            <button class="sidebar-nav-item active" data-nav="chat">
-              <span class="nav-item-text">chat</span>
-            </button>
-            <button class="sidebar-nav-item" data-nav="connectors">
-              <span class="nav-item-text">connectors</span>
-            </button>
-            <button class="sidebar-nav-item" data-nav="skills">
-              <span class="nav-item-text">skills</span>
-            </button>
-            <button class="sidebar-nav-item" data-nav="artifacts">
-              <span class="nav-item-text">artifacts</span>
-            </button>
-            <button class="sidebar-nav-item" data-nav="mdfiles">
-              <span class="nav-item-text">md files</span>
-            </button>
-            <button class="sidebar-nav-item" data-nav="download">
-              <span class="nav-item-text">download</span>
-            </button>
-            <button class="sidebar-nav-item" data-nav="schedule">
-              <span class="nav-item-text">schedule</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- User Profile Anchored at Bottom (Zero Emojis, No Streak) -->
-        <div class="sidebar-bottom">
-          <div class="muse-user-card minimal">
-            <div class="muse-avatar">A</div>
-            <div class="muse-user-meta">
-              <strong>Ayush</strong>
-            </div>
-          </div>
-        </div>
-      </aside>
-
-      <!-- Muse Chat Main Column -->
-      <div class="muse-chat-main">
-        <!-- Minimal Chat Header -->
-        <header class="muse-header minimal-header">
-          <div class="muse-header-left">
-            <span class="muse-thread-title" id="main-panel-title">Companion Chat</span>
-          </div>
-
-          <!-- Pico Picture on the Right Top -->
-          <div class="muse-header-right">
-            <button class="pico-header-btn" id="btn-pico-tasks" aria-label="Open task list" title="Today's Tasks">
-              <img src="/static/pico_pointing_transparent.png" alt="Pico" class="pico-header-avatar">
-            </button>
-
-            <!-- White Box with Task List (Flyout) -->
-            <div class="task-dropdown-box hidden" id="task-dropdown">
-              <div class="task-box-header">
-                <div class="task-box-title">
-                  <strong>Today's Tasks</strong>
-                </div>
-                <span class="task-badge" id="task-completion-badge">2/5 Done</span>
-              </div>
-              <ul class="task-list" id="task-list-items">
-                <li class="task-item completed">
-                  <input type="checkbox" id="t1" checked class="task-checkbox">
-                  <label for="t1">Morning Rise &amp; Briefing (07:00)</label>
-                </li>
-                <li class="task-item completed">
-                  <input type="checkbox" id="t2" checked class="task-checkbox">
-                  <label for="t2">Review Gmail receipts &amp; bookings</label>
-                </li>
-                <li class="task-item">
-                  <input type="checkbox" id="t3" class="task-checkbox">
-                  <label for="t3">Core Work: Ship Pico prototype</label>
-                </li>
-                <li class="task-item">
-                  <input type="checkbox" id="t4" class="task-checkbox">
-                  <label for="t4">Confirm Hair Salon appointment call</label>
-                </li>
-                <li class="task-item">
-                  <input type="checkbox" id="t5" class="task-checkbox">
-                  <label for="t5">Evening Review &amp; Streak close (21:30)</label>
-                </li>
-              </ul>
-              <div class="task-box-footer">
-                <input type="text" id="input-new-task" placeholder="Add a task..." class="new-task-input">
-                <button class="btn-add-task" id="btn-add-task">+</button>
-              </div>
-            </div>
-          </div>
-        </header>
-
-        <!-- PANEL 1: CHAT VIEW -->
-        <div class="muse-panel-view active" id="panel-chat">
-          <div class="muse-thread" id="chat-thread">
-            <div class="chat-empty-state" id="chat-empty-state">
-              <div class="empty-state-avatar">
-                <img src="/static/pico_pointing_transparent.png" alt="Pico">
-              </div>
-              <h3>How can I help you today?</h3>
-              <p>Ask anything, plan your schedule, or give Pico a task.</p>
-            </div>
-          </div>
-
-          <!-- Chat Input Bar -->
-          <div class="muse-input-area">
-            <div class="muse-input-bar">
-              <input 
-                type="text" 
-                id="chat-user-input" 
-                placeholder="Ask Pico anything..."
-                class="muse-text-input"
-              >
-              <button class="muse-send-btn" id="btn-send-chat" title="Send message">
-                <span>Send</span>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- PANEL 2: CONNECTORS VIEW -->
-        <div class="muse-panel-view hidden" id="panel-connectors">
-          <div class="panel-scroll-content">
-            <div class="panel-card bento-glow-card">
-              <div class="border-beam"></div>
-              <div class="panel-header-action">
-                <div>
-                  <h4>Active Context Connectors</h4>
-                  <p class="panel-desc">Real-time background sensors monitoring your browser, inbox, and voice pipes</p>
-                </div>
-                <button class="duo-btn-sm" id="btn-ping-connectors">Ping Live Endpoints</button>
-              </div>
-              
-              <div class="connector-item card-3d-hover" id="conn-chrome">
-                <div class="connector-meta">
-                  <strong>Chrome DevTools Protocol (CDP)</strong>
-                  <span>Endpoint: 127.0.0.1:9222 • Domain categorization</span>
-                </div>
-                <div class="connector-status-group">
-                  <span class="ping-latency" id="ping-chrome">1ms</span>
-                  <span class="status-chip active">Connected</span>
-                </div>
-              </div>
-
-              <div class="connector-item card-3d-hover" id="conn-gmail">
-                <div class="connector-meta">
-                  <strong>Gmail Event &amp; Receipt Watcher</strong>
-                  <span>IMAP SSL • Booking extraction &amp; PNR detection</span>
-                </div>
-                <div class="connector-status-group">
-                  <span class="ping-latency" id="ping-gmail">Standby</span>
-                  <span class="status-chip standby">Standby (.env)</span>
-                </div>
-              </div>
-
-              <div class="connector-item card-3d-hover" id="conn-twilio">
-                <div class="connector-meta">
-                  <strong>Twilio Telephony WebSocket</strong>
-                  <span>Media Stream G.711 &mu;-law audio duplex</span>
-                </div>
-                <div class="connector-status-group">
-                  <span class="ping-latency" id="ping-twilio">Ready</span>
-                  <span class="status-chip active">Ready</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- PANEL 3: SKILLS VIEW -->
-        <div class="muse-panel-view hidden" id="panel-skills">
-          <div class="panel-scroll-content">
-            <div class="panel-card">
-              <h4>Installed Skills</h4>
-              <p class="panel-desc">Sandboxed agent capabilities loaded from the repository</p>
-              
-              <div class="skills-grid">
-                <div class="skill-box">
-                  <strong>browser_agent</strong>
-                  <p>Cloud web page reader with SSRF filter and input sanitation.</p>
-                </div>
-                <div class="skill-box">
-                  <strong>pomodoro_planner</strong>
-                  <p>25/5 and 50/10 focus intervals with burnout mitigation.</p>
-                </div>
-                <div class="skill-box">
-                  <strong>script_doctor</strong>
-                  <p>Shorts &amp; Reels hook scorer and speech runtime estimator.</p>
-                </div>
-                <div class="skill-box">
-                  <strong>macro_calculator</strong>
-                  <p>Mifflin-St Jeor TDEE calculator tailored for Indian diets.</p>
-                </div>
-                <div class="skill-box">
-                  <strong>level_calculator</strong>
-                  <p>Fibonacci Golden Pocket levels (SEBI non-advisory compliant).</p>
-                </div>
-                <div class="skill-box">
-                  <strong>food_lookup</strong>
-                  <p>Curated nutrition and calorie reference database.</p>
-                </div>
-              </div>
-            </div>
-
-            <!-- Card 2: Component Registries & Design Engineering -->
-            <div class="panel-card" style="margin-top: 16px;">
-              <h4>Component Libraries &amp; Registries</h4>
-              <p class="panel-desc">Curated design engineering registries, generative UI tools, and copy-paste components</p>
-
-              <div class="skills-grid">
-                <!-- 21st.dev -->
-                <div class="component-box">
-                  <div>
-                    <div class="component-header">
-                      <a href="https://21st.dev" target="_blank" rel="noopener" class="component-title-link">21st.dev</a>
-                      <span class="component-tag">Design Registry</span>
-                    </div>
-                    <p class="component-desc">The npm for design engineers. Production-ready React, Tailwind, and Framer Motion UI blocks.</p>
-                  </div>
-                  <div class="component-cmd-row">
-                    <span>npx 21st add &lt;item&gt;</span>
-                    <a href="https://21st.dev" target="_blank" rel="noopener" class="component-visit-link">Visit &rarr;</a>
-                  </div>
-                </div>
-
-                <!-- v0 by Vercel -->
-                <div class="component-box">
-                  <div>
-                    <div class="component-header">
-                      <a href="https://v0.dev" target="_blank" rel="noopener" class="component-title-link">v0 by Vercel</a>
-                      <span class="component-tag">Generative UI</span>
-                    </div>
-                    <p class="component-desc">Vercel AI engine that generates production-grade React layouts and shadcn/ui components from prompts.</p>
-                  </div>
-                  <div class="component-cmd-row">
-                    <span>npx v0 add &lt;block-id&gt;</span>
-                    <a href="https://v0.dev" target="_blank" rel="noopener" class="component-visit-link">Visit &rarr;</a>
-                  </div>
-                </div>
-
-                <!-- shadcn/ui -->
-                <div class="component-box">
-                  <div>
-                    <div class="component-header">
-                      <a href="https://ui.shadcn.com" target="_blank" rel="noopener" class="component-title-link">shadcn/ui</a>
-                      <span class="component-tag">Primitives</span>
-                    </div>
-                    <p class="component-desc">Accessible, customizable component system built on Radix UI and Tailwind CSS tokens.</p>
-                  </div>
-                  <div class="component-cmd-row">
-                    <span>npx shadcn@latest add &lt;component&gt;</span>
-                    <a href="https://ui.shadcn.com" target="_blank" rel="noopener" class="component-visit-link">Visit &rarr;</a>
-                  </div>
-                </div>
-
-                <!-- Magic UI -->
-                <div class="component-box">
-                  <div>
-                    <div class="component-header">
-                      <a href="https://magicui.design" target="_blank" rel="noopener" class="component-title-link">Magic UI</a>
-                      <span class="component-tag">Motion Blocks</span>
-                    </div>
-                    <p class="component-desc">150+ free animated components. Bento grids, border beams, animated marquees, and confetti.</p>
-                  </div>
-                  <div class="component-cmd-row">
-                    <span>npx shadcn add https://magicui.design/r/&lt;item&gt;</span>
-                    <a href="https://magicui.design" target="_blank" rel="noopener" class="component-visit-link">Visit &rarr;</a>
-                  </div>
-                </div>
-
-                <!-- Aceternity UI -->
-                <div class="component-box">
-                  <div>
-                    <div class="component-header">
-                      <a href="https://ui.aceternity.com" target="_blank" rel="noopener" class="component-title-link">Aceternity UI</a>
-                      <span class="component-tag">3D &amp; Shaders</span>
-                    </div>
-                    <p class="component-desc">Modern visual components featuring Framer Motion 3D cards, lamp glow, sparkles, and canvas shaders.</p>
-                  </div>
-                  <div class="component-cmd-row">
-                    <span>npm install framer-motion clsx</span>
-                    <a href="https://ui.aceternity.com" target="_blank" rel="noopener" class="component-visit-link">Visit &rarr;</a>
-                  </div>
-                </div>
-
-                <!-- Origin UI -->
-                <div class="component-box">
-                  <div>
-                    <div class="component-header">
-                      <a href="https://originui.com" target="_blank" rel="noopener" class="component-title-link">Origin UI</a>
-                      <span class="component-tag">Inputs &amp; Forms</span>
-                    </div>
-                    <p class="component-desc">Extensive collection of accessible form controls, inputs, selects, switches, sliders, and tooltips.</p>
-                  </div>
-                  <div class="component-cmd-row">
-                    <span>Radix UI + Tailwind Controls</span>
-                    <a href="https://originui.com" target="_blank" rel="noopener" class="component-visit-link">Visit &rarr;</a>
-                  </div>
-                </div>
-
-                <!-- Uiverse.io -->
-                <div class="component-box">
-                  <div>
-                    <div class="component-header">
-                      <a href="https://uiverse.io" target="_blank" rel="noopener" class="component-title-link">Uiverse.io</a>
-                      <span class="component-tag">CSS &amp; Tailwind</span>
-                    </div>
-                    <p class="component-desc">4,000+ community-built micro-elements, animated buttons, loaders, hover effects, and cards.</p>
-                  </div>
-                  <div class="component-cmd-row">
-                    <span>Pure HTML / CSS / Tailwind</span>
-                    <a href="https://uiverse.io" target="_blank" rel="noopener" class="component-visit-link">Visit &rarr;</a>
-                  </div>
-                </div>
-
-                <!-- Cult UI -->
-                <div class="component-box">
-                  <div>
-                    <div class="component-header">
-                      <a href="https://cult-ui.com" target="_blank" rel="noopener" class="component-title-link">Cult UI</a>
-                      <span class="component-tag">Micro-Interactions</span>
-                    </div>
-                    <p class="component-desc">Crafted design engineering pieces: dynamic islands, audio-triggered buttons, and canvas shaders.</p>
-                  </div>
-                  <div class="component-cmd-row">
-                    <span>Interactive Source Code</span>
-                    <a href="https://cult-ui.com" target="_blank" rel="noopener" class="component-visit-link">Visit &rarr;</a>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- PANEL 4: ARTIFACTS VIEW -->
-        <div class="muse-panel-view hidden" id="panel-artifacts">
-          <div class="panel-scroll-content">
-            <div class="panel-card">
-              <h4>Living Artifacts</h4>
-              <p class="panel-desc">Dynamic calculators and trajectory trackers that stay alive</p>
-
-              <div class="artifact-box card-3d-hover">
-                <div class="artifact-meta">
-                  <span class="artifact-tag">ARTIFACT 1</span>
-                  <h5>SIP Compounding Superpower</h5>
-                </div>
-                <div class="artifact-calc-result" id="artifact-sip-val">₹1,91,25,123</div>
-                <p class="artifact-sub" id="artifact-sip-sub">Invested: ₹15,60,000 • Returns: ₹1,75,65,123 (15% CAGR, 26 Years)</p>
-                
-                <div class="artifact-breakdown-bar">
-                  <div class="bar-invested" id="bar-invested" style="width: 8%;"></div>
-                  <div class="bar-returns" id="bar-returns" style="width: 92%;"></div>
-                </div>
-                <div class="artifact-legend">
-                  <span><span class="legend-dot invested"></span>Invested: <strong id="legend-invested">₹15.6L</strong></span>
-                  <span><span class="legend-dot returns"></span>Gain: <strong id="legend-returns">₹1.75Cr</strong></span>
-                </div>
-
-                <div class="artifact-slider-wrap" style="margin-top: 14px;">
-                  <label for="artifact-slider">Monthly Investment: <strong id="artifact-amt-label">₹5,000</strong></label>
-                  <input type="range" id="artifact-slider" min="1000" max="50000" step="1000" value="5000" class="duo-slider">
-                </div>
-              </div>
-
-              <div class="artifact-box card-3d-hover" style="margin-top: 16px;">
-                <div class="artifact-meta">
-                  <span class="artifact-tag">ARTIFACT 2</span>
-                  <h5>90-Day Trajectory Tracker</h5>
-                </div>
-                <p class="trajectory-text">"Ship the first live prototype of Pico with 10 testers on Termux, connect cloud voice telephony, and protect quiet hours."</p>
-                <div class="progress-bar-thin">
-                  <div class="progress-fill" style="width: 28%;"></div>
-                </div>
-                <span class="progress-label">Day 14 of 90 • Momentum Preserved</span>
-
-                <div class="trajectory-milestones">
-                  <div class="milestone-item done">
-                    <span class="milestone-status">DONE</span>
-                    <span class="milestone-title">Core Termux Architecture &amp; SQLite Memory</span>
-                  </div>
-                  <div class="milestone-item done">
-                    <span class="milestone-status">DONE</span>
-                    <span class="milestone-title">Voice Telephony &amp; Hardware Echo Cancellation</span>
-                  </div>
-                  <div class="milestone-item active">
-                    <span class="milestone-status active">ACTIVE</span>
-                    <span class="milestone-title">20 Hobbies Domain Graph &amp; Routine Spine</span>
-                  </div>
-                  <div class="milestone-item pending">
-                    <span class="milestone-status pending">QUEUED</span>
-                    <span class="milestone-title">10 Testers Kill-Test Evaluation Suite</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- PANEL 5: MD FILES VIEW -->
-        <div class="muse-panel-view hidden" id="panel-mdfiles">
-          <div class="panel-scroll-content">
-            <div class="panel-card">
-              <h4>Repository Markdown Files</h4>
-              <p class="panel-desc">Documentation, specifications, and daily briefings (Click any document to inspect)</p>
-              
-              <ul class="file-list">
-                <li class="file-item card-3d-hover" data-path="docs/pico_ui_brief.md">
-                  <span class="file-name">docs/pico_ui_brief.md</span>
-                  <span class="file-meta">Pico UI Design &amp; Architecture Specification</span>
-                </li>
-                <li class="file-item card-3d-hover" data-path="README.md">
-                  <span class="file-name">README.md</span>
-                  <span class="file-meta">Pico Master Architecture &amp; Skill System</span>
-                </li>
-                <li class="file-item card-3d-hover" data-path="docs/superpowers/specs/2026-11-06-native-call-agent-design.md">
-                  <span class="file-name">docs/superpowers/specs/2026-11-06-native-call-agent-design.md</span>
-                  <span class="file-meta">Voice Telephony &amp; Hardware Acoustic Spike</span>
-                </li>
-                <li class="file-item card-3d-hover" data-path="docs/superpowers/plans/2026-11-07-native-call-voice-agent.md">
-                  <span class="file-name">docs/superpowers/plans/2026-11-07-native-call-voice-agent.md</span>
-                  <span class="file-meta">Twilio WebSocket Implementation Plan</span>
-                </li>
-              </ul>
-
-              <!-- Interactive Document Reader Box (Origin UI / 21st.dev style) -->
-              <div class="md-viewer-box hidden" id="md-viewer-box">
-                <div class="md-viewer-header">
-                  <div>
-                    <span class="md-viewer-badge">DOCUMENT VIEWER</span>
-                    <h5 id="md-viewer-title">docs/pico_ui_brief.md</h5>
-                  </div>
-                  <button class="duo-btn-sm" id="btn-close-md-viewer">Close Preview</button>
-                </div>
-                <pre class="md-viewer-pre"><code id="md-viewer-code">Loading...</code></pre>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- PANEL 6: SCHEDULE VIEW -->
-        <div class="muse-panel-view hidden" id="panel-schedule">
-          <div class="panel-scroll-content">
-            <div class="panel-card">
-              <h4>24-Hour Daily Spine</h4>
-              <p class="panel-desc">Routine nodes protecting quiet hours (22:00 &ndash; 07:00)</p>
-
-              <div class="schedule-table">
-                <div class="schedule-row">
-                  <span class="sched-time">07:00 &ndash; 08:30</span>
-                  <span class="sched-title">Morning Rise &amp; Briefing</span>
-                  <span class="sched-tag">Essential</span>
-                </div>
-                <div class="schedule-row current">
-                  <span class="sched-time">09:30 &ndash; 17:30</span>
-                  <span class="sched-title">Core Focus &amp; Coding Block</span>
-                  <span class="sched-tag">Active</span>
-                </div>
-                <div class="schedule-row">
-                  <span class="sched-time">18:30 &ndash; 19:45</span>
-                  <span class="sched-title">Activity &amp; Gym Session</span>
-                  <span class="sched-tag">Fitness</span>
-                </div>
-                <div class="schedule-row">
-                  <span class="sched-time">21:30 &ndash; 22:00</span>
-                  <span class="sched-title">Evening Review &amp; Day Close</span>
-                  <span class="sched-tag">Review</span>
-                </div>
-                <div class="schedule-row quiet">
-                  <span class="sched-time">22:00 &ndash; 07:00</span>
-                  <span class="sched-title">Quiet Hours (Wind-down &amp; Sleep)</span>
-                  <span class="sched-tag">Protected</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-      </div>
-    </div>
-  </section>
-
-  <!-- =========================================================================
-       PAGE 3: AUTHENTIC META MUSE SETTINGS (ZERO EMOJIS)
-       ========================================================================= -->
-  <section class="page-view" id="view-settings">
-    <div class="muse-settings-container">
-      <div class="settings-sidebar">
-        <h3>Settings</h3>
-        <ul class="settings-nav">
-          <li class="active" data-sec="profile">Profile &amp; Goals</li>
-          <li data-sec="voice">Voice &amp; Telephony</li>
-          <li data-sec="spine">Daily Spine &amp; Quiet Hours</li>
-          <li data-sec="watchers">Chrome &amp; Gmail Watchers</li>
-          <li data-sec="memory">Staging Memory</li>
-          <li data-sec="tokens">Token Quota (40M)</li>
-        </ul>
-      </div>
-
-      <div class="settings-content">
-        <!-- Section: Profile & Goals -->
-        <div class="settings-card" id="sec-profile">
-          <div class="card-title">
-            <h4>Profile &amp; 90-Day Trajectory</h4>
-            <p>Customize how Pico addresses and relates with you</p>
-          </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label>Full Name</label>
-              <input type="text" value="Ayush Sharma" class="muse-input" id="set-name">
-            </div>
-            <div class="form-group">
-              <label>Nickname</label>
-              <input type="text" value="Ayush" class="muse-input" id="set-nickname">
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label>Primary Launchpad Category</label>
-            <select class="muse-select" id="set-category">
-              <option selected>Coding &amp; Tech</option>
-              <option>Gym &amp; Fitness</option>
-              <option>Business &amp; Startups</option>
-              <option>Stock Market</option>
-              <option>Content Creation</option>
-              <option>Just want a friend</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label>90-Day Trajectory Goal</label>
-            <textarea class="muse-textarea" rows="3" id="set-goal">Ship the first live prototype of Pico with 10 testers on Termux, connect full-duplex cloud voice telephony, and protect personal quiet hours.</textarea>
-            <div class="word-counter-badge" id="set-word-count">21 / 20 words Pass</div>
-          </div>
-
-          <div class="card-footer-action">
-            <button class="duo-btn duo-btn-primary" id="btn-save-profile">Save Profile Changes</button>
-          </div>
-        </div>
-
-        <!-- Section: Voice & Telephony -->
-        <div class="settings-card hidden" id="sec-voice">
-          <div class="card-title">
-            <h4>Voice Telephony Engine</h4>
-            <p>Twilio cloud media stream and strict Ask-First gates</p>
-          </div>
-
-          <div class="form-group">
-            <label>Telephony Backend</label>
-            <select class="muse-select" id="set-telephony-backend">
-              <option selected>Twilio WebSocket Media Stream (Cloud)</option>
-              <option>Native Android SIM (Termux Telephony)</option>
-            </select>
-          </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label>Twilio Account SID</label>
-              <input type="text" value="YOUR_TWILIO_ACCOUNT_SID" class="muse-input mono" readonly>
-            </div>
-            <div class="form-group">
-              <label>Authority Level Gate</label>
-              <select class="muse-select">
-                <option>L0 &mdash; Read-only observation</option>
-                <option>L1 &mdash; Reversible drafting</option>
-                <option selected>L2 &mdash; Live Call (Ask-First Required)</option>
-                <option disabled>L3 &mdash; Financial Binding (Hard-Blocked)</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="toggle-group">
-            <div class="toggle-info">
-              <strong>Silero VAD Barge-In (&lt;50ms)</strong>
-              <span>Immediately silences assistant speech when callee speaks</span>
-            </div>
-            <input type="checkbox" checked class="muse-switch">
-          </div>
-        </div>
-
-        <!-- Section: Daily Spine & Quiet Hours -->
-        <div class="settings-card hidden" id="sec-spine">
-          <div class="card-title">
-            <h4>Daily Spine &amp; Quiet Hours</h4>
-            <p>Guaranteed protection of your sleep schedule</p>
-          </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label>Wake Time (Morning Brief)</label>
-              <input type="time" value="07:00" class="muse-input">
-            </div>
-            <div class="form-group">
-              <label>Sleep Time (Wind-down)</label>
-              <input type="time" value="23:00" class="muse-input">
-            </div>
-          </div>
-
-          <div class="toggle-group">
-            <div class="toggle-info">
-              <strong>Strict Quiet Hours (22:00 &ndash; 07:00)</strong>
-              <span>Blocks non-critical pushes, notifications, and background pings</span>
-            </div>
-            <input type="checkbox" checked class="muse-switch">
-          </div>
+      <div class="stealth-right">
+        <h1 class="stealth-headline">The free, fun, and effective way to master your daily momentum!</h1>
+        <div class="stealth-cta-group">
+          <button class="tactile-btn tactile-btn-primary stealth-cta" id="btn-stealth-start">GET STARTED</button>
+          <button class="tactile-btn stealth-cta-secondary" id="btn-stealth-login">I ALREADY HAVE AN ACCOUNT</button>
         </div>
       </div>
     </div>
-  </section>
-
-  <!-- Origin UI Style Toast Notification (Zero Emojis) -->
-  <div class="origin-toast hidden" id="origin-toast" role="status" aria-live="polite">
-    <span class="toast-dot"></span>
-    <span class="toast-message" id="toast-message">Copied to clipboard</span>
   </div>
+
+  <!-- ========================================= -->
+  <!-- MAIN APP SHELL (Muse Chat Layout)         -->
+  <!-- ========================================= -->
+  <div id="app-shell" class="app-shell muse-chat-layout">
+
+    <!-- LEFT NAV RAIL -->
+    <nav class="nav-rail" id="nav-rail">
+      <div class="nav-rail-top">
+        <div class="nav-logo" id="btn-stealth-trigger" title="Double press Esc for stealth mode">
+          <img src="/static/pico_pointing_transparent.png" alt="Pico" class="nav-logo-img">
+          <span class="nav-logo-text">Pico</span>
+        </div>
+
+        <div class="view-switcher" id="view-switcher">
+          <div class="nav-section-label">WORKSPACE</div>
+          <button class="nav-item active" data-mode="today" data-panel="chat" id="nav-today">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            <span class="nav-label">chat</span>
+          </button>
+          <button class="nav-item" data-mode="today" data-panel="schedule" id="nav-schedule">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            <span class="nav-label">schedule</span>
+          </button>
+          <button class="nav-item" data-mode="today" data-panel="artifacts" id="nav-artifacts">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+            <span class="nav-label">artifacts</span>
+          </button>
+          <button class="nav-item" data-mode="today" data-panel="connectors" id="nav-connectors">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg>
+            <span class="nav-label">connectors</span>
+          </button>
+          <button class="nav-item" data-mode="today" data-panel="skills" id="nav-skills">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            <span class="nav-label">skills</span>
+          </button>
+          <button class="nav-item" data-mode="today" data-panel="mdfiles" id="nav-mdfiles">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            <span class="nav-label">md files</span>
+          </button>
+          <button class="nav-item" data-mode="memory" id="nav-memory">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+            <span class="nav-label">memory</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="nav-rail-bottom">
+        <button class="nav-item" id="nav-download" title="Export conversation as JSON">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          <span class="nav-label">download</span>
+        </button>
+        <button class="nav-item" data-mode="settings" id="nav-settings">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.32 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          <span class="nav-label">settings</span>
+        </button>
+        <div class="nav-profile">
+          <div class="nav-profile-avatar" id="nav-profile-avatar">P</div>
+          <span class="nav-profile-name" id="nav-profile-name">Friend</span>
+        </div>
+      </div>
+    </nav>
+
+    <!-- MOBILE BOTTOM NAV -->
+    <nav class="mobile-nav" id="mobile-nav">
+      <button class="mobile-nav-item active" data-mode="today" data-panel="chat">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        <span>Chat</span>
+      </button>
+      <button class="mobile-nav-item" data-mode="today" data-panel="schedule">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        <span>Routine</span>
+      </button>
+      <button class="mobile-nav-item" data-mode="memory">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+        <span>Memory</span>
+      </button>
+      <button class="mobile-nav-item" data-mode="settings">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.32 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        <span>Settings</span>
+      </button>
+    </nav>
+
+    <!-- MAIN CONTENT AREA -->
+    <main class="main-content">
+
+      <!-- ===== STATUS HEADER ===== -->
+      <header class="status-header" id="status-header">
+        <div class="status-left">
+          <button class="avatar-button" id="btn-pico-tasks" title="Toggle routine tasks dropdown">
+            <img src="/static/pico_pointing_transparent.png" alt="Pico" class="status-avatar">
+          </button>
+          <span class="status-dot" id="status-dot"></span>
+          <span class="status-text" id="status-text">Connecting to companion...</span>
+        </div>
+
+        <div class="status-right">
+          <div class="streak-pill" id="streak-pill">
+            <span class="streak-icon">*</span>
+            <span class="streak-count" id="streak-count">0</span>
+            <span class="streak-label">day streak</span>
+          </div>
+          <button class="icon-btn" id="btn-sound" title="Toggle tactile sound">
+            <svg class="icon-sm" id="icon-sound-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+          </button>
+        </div>
+
+        <!-- Task Dropdown Popover -->
+        <div class="task-dropdown hidden" id="task-dropdown">
+          <div class="task-dropdown-header">
+            <span class="task-dropdown-title">Today's Routine Focus</span>
+            <span class="mono-badge" id="task-dropdown-count">0 steps</span>
+          </div>
+          <div class="task-dropdown-body" id="task-dropdown-items">
+            <div class="empty-state">Loading tasks...</div>
+          </div>
+        </div>
+      </header>
+
+      <!-- ===== MODE 1: TODAY & COMPANION STREAM ===== -->
+      <div class="mode-panel active" id="mode-today">
+        <div class="today-layout">
+
+          <!-- CENTER COLUMN: Brief + Chat Thread + Composer -->
+          <div class="center-column" id="panel-chat">
+
+            <!-- Morning Brief Banner -->
+            <div class="brief-banner" id="brief-banner">
+              <button class="brief-header" id="brief-toggle" type="button">
+                <span class="brief-title">Morning Brief</span>
+                <span class="brief-state-pill" id="brief-state-pill">collapse</span>
+              </button>
+              <div class="brief-body" id="brief-body">
+                <p class="brief-content" id="brief-content">Loading daily brief...</p>
+              </div>
+            </div>
+
+            <!-- Chat Thread -->
+            <div class="chat-thread" id="chat-thread">
+              <div class="chat-welcome">
+                <p class="chat-welcome-text">Hey there. I'm Pico, your autonomous companion. Ask me anything, review your plan, or inspect your memory.</p>
+              </div>
+            </div>
+
+            <!-- Composer -->
+            <div class="composer" id="composer">
+              <div class="quick-chips" id="quick-chips">
+                <button class="quick-chip" data-prompt="Run morning brief">Run morning brief</button>
+                <button class="quick-chip" data-prompt="Check my day path">Check my day path</button>
+                <button class="quick-chip" data-prompt="What do you know about me?">What do you know about me?</button>
+              </div>
+              <div class="composer-row">
+                <input type="text" class="composer-input" id="chat-input" placeholder="Message Pico..." autocomplete="off">
+                <button class="tactile-btn tactile-btn-primary composer-send" id="btn-send" title="Send message">
+                  <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                </button>
+              </div>
+              <div class="composer-footer">
+                <span class="token-badge mono" id="token-badge">0 tokens</span>
+                <span class="quiet-hours-badge mono">Quiet hours: 22:00 - 07:00</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- RIGHT SPATIAL CANVAS: Routine Spine & Workspace Panels -->
+          <aside class="right-canvas" id="right-canvas">
+            <div class="tab-switcher" id="right-canvas-tabs">
+              <button class="tab-btn active" data-tab="routine" id="tab-routine">routine</button>
+              <button class="tab-btn" data-tab="artifacts" id="tab-artifacts">artifacts</button>
+              <button class="tab-btn" data-tab="skills" id="tab-skills">skills</button>
+              <button class="tab-btn" data-tab="connectors" id="tab-connectors">connectors</button>
+              <button class="tab-btn" data-tab="mdfiles" id="tab-mdfiles">md files</button>
+            </div>
+
+            <!-- Panel: Routine Spine -->
+            <div class="tab-panel active" id="panel-schedule">
+              <div class="panel-header-row">
+                <h3 class="panel-heading">Daily Routine Spine</h3>
+                <span class="mono-badge" id="routine-active-tag">Active</span>
+              </div>
+              <div class="routine-list" id="routine-list">
+                <div class="empty-state" id="routine-empty">Loading routine...</div>
+              </div>
+            </div>
+
+            <!-- Panel: Living Artifacts -->
+            <div class="tab-panel" id="panel-artifacts">
+              <div class="panel-header-row">
+                <h3 class="panel-heading">Living Artifacts</h3>
+                <span class="mono-badge">Interactive</span>
+              </div>
+              <div class="artifacts-grid" id="artifacts-grid">
+                <!-- SIP Calculator Artifact Card -->
+                <div class="artifact-card" id="artifact-sip-card">
+                  <div class="artifact-card-header">
+                    <span class="artifact-tag">FINANCIAL DISCIPLINE</span>
+                    <h4 class="artifact-title">SIP Compound Growth</h4>
+                  </div>
+                  <div class="artifact-metric-box">
+                    <div class="artifact-primary-metric" id="sip-primary-val">₹1,91,25,123</div>
+                    <div class="artifact-secondary-metric" id="sip-secondary-val">₹5,000/mo at 15% CAGR for 26 yrs</div>
+                  </div>
+                  <div class="artifact-his-line" id="sip-his-line">Boring superpower: consistency beats intensity.</div>
+                  <div class="artifact-controls">
+                    <div class="control-row">
+                      <label>Monthly (₹)</label>
+                      <input type="number" id="sip-input-amt" value="5000" step="500" class="tactile-input mono">
+                    </div>
+                    <div class="control-row">
+                      <label>CAGR (%)</label>
+                      <input type="number" id="sip-input-cagr" value="15" step="0.5" class="tactile-input mono">
+                    </div>
+                    <div class="control-row">
+                      <label>Years</label>
+                      <input type="number" id="sip-input-years" value="26" step="1" class="tactile-input mono">
+                    </div>
+                    <button class="tactile-btn tactile-btn-primary" id="btn-recalc-sip">Recalculate</button>
+                  </div>
+                </div>
+
+                <!-- Goal Trajectory Card -->
+                <div class="artifact-card" id="artifact-goal-card">
+                  <div class="artifact-card-header">
+                    <span class="artifact-tag">90-DAY TRAJECTORY</span>
+                    <h4 class="artifact-title" id="goal-artifact-title">Current Focus</h4>
+                  </div>
+                  <div class="artifact-metric-box">
+                    <div class="artifact-primary-metric" id="goal-primary-val">Launch companion app</div>
+                    <div class="artifact-secondary-metric" id="goal-secondary-val">Daily momentum active</div>
+                  </div>
+                  <div class="artifact-his-line" id="goal-his-line">Progress compound daily.</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Panel: Component Registries & Skills -->
+            <div class="tab-panel" id="panel-skills">
+              <div class="panel-header-row">
+                <h3 class="panel-heading">Component Registries & Skills</h3>
+                <span class="mono-badge">8 registries</span>
+              </div>
+              <div class="skills-registry-grid">
+                <div class="registry-card">
+                  <div class="registry-header">
+                    <strong>21st.dev</strong>
+                    <span class="registry-tag">Magic MCP</span>
+                  </div>
+                  <p class="registry-desc">The npm for design engineers. Production Tailwind & React components.</p>
+                  <code class="registry-code mono">npx 21st add button</code>
+                </div>
+                <div class="registry-card">
+                  <div class="registry-header">
+                    <strong>v0 by Vercel</strong>
+                    <span class="registry-tag">Generative UI</span>
+                  </div>
+                  <p class="registry-desc">Generative blocks producing React + shadcn/ui layouts.</p>
+                  <code class="registry-code mono">npx v0 add block-name</code>
+                </div>
+                <div class="registry-card">
+                  <div class="registry-header">
+                    <strong>shadcn/ui</strong>
+                    <span class="registry-tag">Radix Primitives</span>
+                  </div>
+                  <p class="registry-desc">Accessible primitives with zero runtime token styling.</p>
+                  <code class="registry-code mono">npx shadcn@latest add dialog</code>
+                </div>
+                <div class="registry-card">
+                  <div class="registry-header">
+                    <strong>Magic UI</strong>
+                    <span class="registry-tag">Animated Blocks</span>
+                  </div>
+                  <p class="registry-desc">150+ animated blocks: Bento grids, border beams, marquees.</p>
+                  <code class="registry-code mono">npx magic-ui add border-beam</code>
+                </div>
+                <div class="registry-card">
+                  <div class="registry-header">
+                    <strong>Aceternity UI</strong>
+                    <span class="registry-tag">3D & Shaders</span>
+                  </div>
+                  <p class="registry-desc">3D cards, lamp glow headers, hero parallax, canvas shaders.</p>
+                  <code class="registry-code mono">npx aceternity add 3d-card</code>
+                </div>
+                <div class="registry-card">
+                  <div class="registry-header">
+                    <strong>Origin UI</strong>
+                    <span class="registry-tag">Form Controls</span>
+                  </div>
+                  <p class="registry-desc">Accessible inputs, selects, switches, sliders, and toasts.</p>
+                  <code class="registry-code mono">npx origin-ui add toast</code>
+                </div>
+                <div class="registry-card">
+                  <div class="registry-header">
+                    <strong>Uiverse.io</strong>
+                    <span class="registry-tag">Micro-Elements</span>
+                  </div>
+                  <p class="registry-desc">4,000+ open-source CSS & Tailwind micro-elements.</p>
+                  <code class="registry-code mono">uiverse component embed</code>
+                </div>
+                <div class="registry-card">
+                  <div class="registry-header">
+                    <strong>Cult UI</strong>
+                    <span class="registry-tag">Dynamic Canvas</span>
+                  </div>
+                  <p class="registry-desc">Dynamic islands, audio buttons, and WebGL shader canvases.</p>
+                  <code class="registry-code mono">npx cult-ui add island</code>
+                </div>
+              </div>
+            </div>
+
+            <!-- Panel: Connectors -->
+            <div class="tab-panel" id="panel-connectors">
+              <div class="panel-header-row">
+                <h3 class="panel-heading">Connected Pipes</h3>
+                <span class="mono-badge">Telemetry</span>
+              </div>
+              <div class="connectors-list">
+                <div class="connector-item">
+                  <div class="connector-info">
+                    <span class="status-dot status-dot-sm status-dot-online"></span>
+                    <div>
+                      <div class="connector-name">Local REST API</div>
+                      <div class="connector-sub mono">http://127.0.0.1:8000</div>
+                    </div>
+                  </div>
+                  <span class="mono-badge" id="conn-rest-status">online</span>
+                </div>
+                <div class="connector-item">
+                  <div class="connector-info">
+                    <span class="status-dot status-dot-sm" id="conn-chrome-dot"></span>
+                    <div>
+                      <div class="connector-name">Chrome DevTools Watcher</div>
+                      <div class="connector-sub mono">Port 9222 CDP</div>
+                    </div>
+                  </div>
+                  <span class="mono-badge" id="conn-chrome-status">checking</span>
+                </div>
+                <div class="connector-item">
+                  <div class="connector-info">
+                    <span class="status-dot status-dot-sm" id="conn-gmail-dot"></span>
+                    <div>
+                      <div class="connector-name">Gmail IMAP Ingestion</div>
+                      <div class="connector-sub mono">Receipts & Alerts</div>
+                    </div>
+                  </div>
+                  <span class="mono-badge" id="conn-gmail-status">checking</span>
+                </div>
+                <div class="connector-item">
+                  <div class="connector-info">
+                    <span class="status-dot status-dot-sm" id="conn-twilio-dot"></span>
+                    <div>
+                      <div class="connector-name">Twilio Voice Media Stream</div>
+                      <div class="connector-sub mono">WebSocket Full-Duplex</div>
+                    </div>
+                  </div>
+                  <span class="mono-badge" id="conn-twilio-status">checking</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Panel: Markdown Repository Docs -->
+            <div class="tab-panel" id="panel-mdfiles">
+              <div class="panel-header-row">
+                <h3 class="panel-heading">Repository Markdown Reader</h3>
+                <span class="mono-badge">Local Docs</span>
+              </div>
+              <div class="doc-selector-row">
+                <select id="doc-file-select" class="tactile-input mono">
+                  <option value="docs/pico_ui_brief.md">docs/pico_ui_brief.md</option>
+                  <option value="README.md">README.md</option>
+                </select>
+                <button class="tactile-btn" id="btn-load-doc">View</button>
+              </div>
+              <div class="md-viewer-box" id="md-viewer-box">
+                <pre class="md-content mono" id="md-viewer-content">Select a markdown file to inspect.</pre>
+              </div>
+            </div>
+
+          </aside>
+
+        </div>
+      </div>
+
+      <!-- ===== MODE 2: MEMORY & WATCHERS ===== -->
+      <div class="mode-panel" id="mode-memory">
+        <div class="memory-layout">
+
+          <!-- Hermes Memory Section -->
+          <section class="memory-section">
+            <div class="section-header-row">
+              <div>
+                <h2 class="section-title">What Pico Knows</h2>
+                <p class="section-subtitle">Hermes curated memories, personal facts, and preferences</p>
+              </div>
+              <span class="mono-badge" id="memory-count-badge">0 facts</span>
+            </div>
+            <div class="memory-cards-grid" id="memory-cards">
+              <div class="empty-state">Hermes is still learning your preferences.</div>
+            </div>
+          </section>
+
+          <!-- Reflection Notes -->
+          <section class="memory-section">
+            <div class="section-header-row">
+              <div>
+                <h2 class="section-title">Reflection Notes</h2>
+                <p class="section-subtitle">Periodic evaluation and habit alignment</p>
+              </div>
+            </div>
+            <div class="review-box" id="review-cards">
+              <div class="empty-state">Loading reflection notes...</div>
+            </div>
+          </section>
+
+          <!-- Live Watchers -->
+          <section class="memory-section">
+            <div class="section-header-row">
+              <div>
+                <h2 class="section-title">Live Watchers</h2>
+                <p class="section-subtitle">Real-time signals ingested from connected applications</p>
+              </div>
+            </div>
+            <div class="watchers-grid">
+              <!-- Chrome Watcher Card -->
+              <div class="watcher-card" id="watcher-chrome">
+                <div class="watcher-header">
+                  <div class="watcher-title-group">
+                    <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><line x1="21.17" y1="8" x2="12" y2="8"/><line x1="3.95" y1="6.06" x2="8.54" y2="14"/><line x1="10.88" y1="21.94" x2="15.46" y2="14"/></svg>
+                    <span class="watcher-title">Chrome Tabs</span>
+                  </div>
+                  <span class="status-dot status-dot-sm" id="chrome-dot"></span>
+                </div>
+                <div class="watcher-body" id="chrome-tabs">
+                  <div class="empty-state">No recent tabs recorded</div>
+                </div>
+              </div>
+
+              <!-- Gmail Watcher Card -->
+              <div class="watcher-card" id="watcher-gmail">
+                <div class="watcher-header">
+                  <div class="watcher-title-group">
+                    <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                    <span class="watcher-title">Gmail Signals</span>
+                  </div>
+                  <span class="status-dot status-dot-sm" id="gmail-dot"></span>
+                </div>
+                <div class="watcher-body" id="gmail-signals">
+                  <div class="empty-state">No recent email signals</div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+        </div>
+      </div>
+
+      <!-- ===== MODE 3: SETTINGS MODAL ===== -->
+      <div class="mode-panel" id="mode-settings">
+        <div class="settings-modal-inner">
+          <div class="settings-top-bar">
+            <h2 class="settings-title">Settings & Governance</h2>
+            <button class="tactile-btn" id="btn-close-settings">Close</button>
+          </div>
+
+          <!-- Sound & Feedback -->
+          <div class="settings-group">
+            <h3 class="settings-group-title">Companion Voice & Sound</h3>
+            <div class="settings-row">
+              <div>
+                <div class="settings-label">Tactile sound effects</div>
+                <div class="settings-desc">Soft marimba audio pops on routine checks and actions</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="toggle-sound" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Token Telemetry -->
+          <div class="settings-group">
+            <h3 class="settings-group-title">Token & Model Telemetry</h3>
+            <div class="settings-row">
+              <div>
+                <div class="settings-label">Monthly allowance</div>
+                <div class="settings-desc">Hard ceiling managed by Local Token Governor</div>
+              </div>
+              <span class="token-badge mono" id="settings-token-count">0 / 40M</span>
+            </div>
+            <div class="progress-bar" id="token-progress">
+              <div class="progress-fill" id="token-fill" style="width: 0%"></div>
+            </div>
+          </div>
+
+          <!-- Telephony & Authority -->
+          <div class="settings-group">
+            <h3 class="settings-group-title">Telephony & Channels</h3>
+            <div class="settings-row">
+              <div>
+                <div class="settings-label">Twilio Voice Media Stream</div>
+                <div class="settings-desc">TwiML endpoint /api/telephony/twiml</div>
+              </div>
+              <span class="mono-badge" id="twilio-status">Operational</span>
+            </div>
+            <div class="settings-row">
+              <div>
+                <div class="settings-label">Ask-First Authority Gate</div>
+                <div class="settings-desc">L0 Observation, L1 Reversible, L2 Live Call, L3 Hard-Blocked</div>
+              </div>
+              <span class="mono-badge">Enforced</span>
+            </div>
+            <div class="settings-row">
+              <div>
+                <div class="settings-label">Twilio Account SID</div>
+                <div class="settings-desc">Voice media bridge credentials</div>
+              </div>
+              <input type="text" value="YOUR_TWILIO_ACCOUNT_SID" class="tactile-input mono" readonly>
+            </div>
+          </div>
+
+          <!-- Daily Spine & Quiet Hours -->
+          <div class="settings-group">
+            <h3 class="settings-group-title">Daily Spine & Quiet Hours</h3>
+            <div class="settings-row">
+              <div>
+                <div class="settings-label">Nightly quiet hours</div>
+                <div class="settings-desc">Silences routine alerts and notifications</div>
+              </div>
+              <span class="mono-badge">22:00 - 07:00</span>
+            </div>
+          </div>
+
+          <!-- Data & Export -->
+          <div class="settings-group">
+            <h3 class="settings-group-title">Data Backup</h3>
+            <div class="settings-row">
+              <div>
+                <div class="settings-label">Export chat transcript</div>
+                <div class="settings-desc">Download a local JSON backup of all messages</div>
+              </div>
+              <button class="tactile-btn" id="btn-export">Download JSON</button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toast-container"></div>
 
   <script src="/static/app.js"></script>
 </body>
