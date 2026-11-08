@@ -11,12 +11,11 @@
   const state = {
     currentMode: 'today',      // 'today' | 'memory' | 'settings'
     previousMode: 'today',
-    currentPanel: 'chat',      // 'chat' | 'schedule' | 'artifacts' | 'skills' | 'connectors' | 'mdfiles'
+    currentView: 'chat',       // 'chat' | 'panel' (for mobile toggling between chat and right canvas)
     activeRightTab: 'routine', // 'routine' | 'artifacts' | 'skills' | 'connectors' | 'mdfiles'
     soundEnabled: true,
     stealthMode: false,
     online: false,
-    userProfile: { name: 'Friend', avatar: 'P' },
     chatHistory: [],
     audioCtx: null,
     lastEscPress: 0,
@@ -96,6 +95,7 @@
       state.previousMode = state.currentMode;
       const settingsModal = $('#mode-settings');
       if (settingsModal) settingsModal.classList.add('active');
+      playPop();
       return;
     }
 
@@ -105,35 +105,58 @@
     const targetPanel = $(`#mode-${mode}`);
     if (targetPanel) targetPanel.classList.add('active');
 
-    // Update active nav rail & mobile items
+    // Update active nav rail items
     $$('.nav-item').forEach(item => {
       if (item.dataset.mode === mode && (!panel || item.dataset.panel === panel)) {
         item.classList.add('active');
-      } else if (item.dataset.mode === mode && !panel) {
+      } else if (item.dataset.mode === mode && !panel && !item.dataset.panel) {
         item.classList.add('active');
       } else {
         item.classList.remove('active');
       }
     });
 
+    // Update active mobile nav items
     $$('.mobile-nav-item').forEach(item => {
-      if (item.dataset.mode === mode) item.classList.add('active');
-      else item.classList.remove('active');
+      if (item.dataset.mode === mode && (!panel || item.dataset.panel === panel)) {
+        item.classList.add('active');
+      } else {
+        item.classList.remove('active');
+      }
     });
 
-    // If specific panel requested inside Today mode
-    if (panel) {
-      switchRightTab(panel);
+    // Panel switching on Today view
+    if (mode === 'today') {
+      const centerCol = $('#panel-chat');
+      const rightCanvas = $('#right-canvas');
+
+      if (panel === 'chat' || !panel) {
+        state.currentView = 'chat';
+        if (centerCol) centerCol.classList.add('active-view');
+        if (rightCanvas) rightCanvas.classList.remove('active-view');
+      } else {
+        // One of the workspace tabs (schedule, artifacts, skills, connectors, mdfiles)
+        state.currentView = 'panel';
+        if (centerCol) centerCol.classList.remove('active-view');
+        if (rightCanvas) rightCanvas.classList.add('active-view');
+        switchRightTab(panel);
+      }
     }
 
     playPop();
   }
 
   function switchRightTab(tabKey) {
-    state.activeRightTab = tabKey;
+    const canonicalKey = (tabKey === 'schedule' || tabKey === 'routine') ? 'routine' : tabKey;
+    state.activeRightTab = canonicalKey;
+
+    // Update Tab Switcher Buttons
     $$('#right-canvas-tabs .tab-btn').forEach(btn => {
-      if (btn.dataset.tab === tabKey) btn.classList.add('active');
-      else btn.classList.remove('active');
+      if (btn.dataset.tab === canonicalKey || (canonicalKey === 'routine' && btn.dataset.tab === 'routine')) {
+        btn.classList.add('active');
+      } else {
+        btn.classList.remove('active');
+      }
     });
 
     const panelMap = {
@@ -145,10 +168,18 @@
       mdfiles: 'panel-mdfiles'
     };
 
-    const targetPanelId = panelMap[tabKey] || `panel-${tabKey}`;
+    const targetPanelId = panelMap[canonicalKey] || `panel-${canonicalKey}`;
     $$('.right-canvas .tab-panel').forEach(p => p.classList.remove('active'));
     const target = $(`#${targetPanelId}`);
     if (target) target.classList.add('active');
+
+    // On mobile, ensure right-canvas is active-view when a tab is clicked
+    const centerCol = $('#panel-chat');
+    const rightCanvas = $('#right-canvas');
+    if (window.innerWidth <= 768) {
+      if (centerCol) centerCol.classList.remove('active-view');
+      if (rightCanvas) rightCanvas.classList.add('active-view');
+    }
   }
 
   // ==========================================================================
@@ -158,24 +189,22 @@
   async function checkHealth() {
     const data = await api('/api/health');
     const dot = $('#status-dot');
+    const rightDot = $('#pico-right-dot');
+    const profileDot = $('#pico-profile-dot');
     const text = $('#status-text');
 
     if (data && data.status === 'healthy') {
       state.online = true;
-      if (dot) {
-        dot.className = 'status-dot online';
-      }
-      if (text) {
-        text.textContent = 'Pico is active & watching';
-      }
+      if (dot) dot.className = 'status-dot online';
+      if (rightDot) rightDot.className = 'status-dot status-dot-sm online';
+      if (profileDot) profileDot.className = 'status-dot status-dot-sm online';
+      if (text) text.textContent = 'Pico is active & watching';
     } else {
       state.online = false;
-      if (dot) {
-        dot.className = 'status-dot offline';
-      }
-      if (text) {
-        text.textContent = 'Companion offline - retrying';
-      }
+      if (dot) dot.className = 'status-dot offline';
+      if (rightDot) rightDot.className = 'status-dot status-dot-sm offline';
+      if (profileDot) profileDot.className = 'status-dot status-dot-sm offline';
+      if (text) text.textContent = 'Companion offline - retrying';
     }
   }
 
@@ -183,8 +212,12 @@
     const beat = await api('/api/heartbeat', { method: 'POST' });
     if (beat && state.online) {
       const text = $('#status-text');
+      const rightSub = $('#pico-right-sub');
       if (text && beat.outcome) {
         text.textContent = `Pico beat #${beat.beat_number} (${beat.outcome})`;
+      }
+      if (rightSub && beat.outcome) {
+        rightSub.textContent = `Heartbeat #${beat.beat_number} active`;
       }
     }
   }
@@ -195,37 +228,6 @@
       const score = card.total_score !== undefined ? card.total_score : 1;
       const pill = $('#streak-count');
       if (pill) pill.textContent = score;
-    }
-  }
-
-  // ==========================================================================
-  // MORNING BRIEF
-  // ==========================================================================
-
-  async function loadMorningBrief() {
-    const data = await api('/api/brief');
-    const container = $('#brief-content');
-    if (!container) return;
-
-    if (data && data.morning_brief) {
-      container.textContent = stripEmojis(data.morning_brief);
-    } else {
-      container.textContent = 'No daily brief generated yet. Ask Pico to prepare your day path.';
-    }
-  }
-
-  function initBriefToggle() {
-    const banner = $('#brief-banner');
-    const toggleBtn = $('#brief-toggle');
-    const statePill = $('#brief-state-pill');
-
-    if (toggleBtn && banner) {
-      toggleBtn.addEventListener('click', () => {
-        banner.classList.toggle('collapsed');
-        const isCollapsed = banner.classList.contains('collapsed');
-        if (statePill) statePill.textContent = isCollapsed ? 'expand' : 'collapse';
-        playPop();
-      });
     }
   }
 
@@ -301,7 +303,10 @@
     if (dropdownCount) dropdownCount.textContent = `${data.day_path.length} steps`;
 
     const html = data.day_path.map(item => {
-      const savedCompleted = localStorage.getItem(`pico_step_${item.id}`) === '1';
+      let savedCompleted = false;
+      try {
+        savedCompleted = localStorage.getItem(`pico_step_${item.id}`) === '1';
+      } catch (e) {}
       return `
         <div class="routine-item ${savedCompleted ? 'completed' : ''}" data-id="${item.id}">
           <div class="routine-item-left">
@@ -319,7 +324,7 @@
     if (list) list.innerHTML = html;
     if (dropdownItems) dropdownItems.innerHTML = html;
 
-    // Attach check events
+    // Attach checkbox click events
     $$('.routine-checkbox').forEach(box => {
       box.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -329,18 +334,20 @@
 
         const isDone = parent.classList.toggle('completed');
         box.textContent = isDone ? '✓' : '';
-        if (isDone) {
-          localStorage.setItem(`pico_step_${id}`, '1');
-        } else {
-          localStorage.removeItem(`pico_step_${id}`);
-        }
+        try {
+          if (isDone) {
+            localStorage.setItem(`pico_step_${id}`, '1');
+          } else {
+            localStorage.removeItem(`pico_step_${id}`);
+          }
+        } catch (err) {}
         playPop();
       });
     });
   }
 
   async function loadArtifacts() {
-    // SIP Artifact
+    // 1. SIP Artifact
     const sip = await api('/api/artifacts/sip?amt=5000&cagr=15&years=26');
     if (sip) {
       const primary = $('#sip-primary-val');
@@ -351,7 +358,7 @@
       if (hisLine && sip.his_line) hisLine.textContent = sip.his_line;
     }
 
-    // Goal Artifact
+    // 2. Goal Artifact
     const goal = await api('/api/artifacts/goal');
     if (goal) {
       const title = $('#goal-artifact-title');
@@ -414,8 +421,8 @@
     const chromeContainer = $('#chrome-tabs');
 
     if (chromeData) {
-      if (chromeDot) chromeDot.className = 'status-dot status-dot-sm status-dot-online';
-      if (chromeModeDot) chromeModeDot.className = 'status-dot status-dot-sm status-dot-online';
+      if (chromeDot) chromeDot.className = 'status-dot status-dot-sm online';
+      if (chromeModeDot) chromeModeDot.className = 'status-dot status-dot-sm online';
       if (chromeStatus) chromeStatus.textContent = `${chromeData.tab_count || 0} tabs`;
 
       if (chromeContainer && chromeData.recent_tabs && chromeData.recent_tabs.length > 0) {
@@ -437,8 +444,8 @@
 
     if (gmailData) {
       const isConf = gmailData.configured;
-      if (gmailDot) gmailDot.className = `status-dot status-dot-sm ${isConf ? 'status-dot-online' : ''}`;
-      if (gmailModeDot) gmailModeDot.className = `status-dot status-dot-sm ${isConf ? 'status-dot-online' : ''}`;
+      if (gmailDot) gmailDot.className = `status-dot status-dot-sm ${isConf ? 'online' : ''}`;
+      if (gmailModeDot) gmailModeDot.className = `status-dot status-dot-sm ${isConf ? 'online' : ''}`;
       if (gmailStatus) gmailStatus.textContent = isConf ? `${gmailData.count || 0} signals` : 'unconfigured';
 
       if (gmailContainer) {
@@ -459,7 +466,7 @@
     const twilioStatus = $('#conn-twilio-status');
     const twilioDot = $('#conn-twilio-dot');
     if (twilioStatus) twilioStatus.textContent = 'ready';
-    if (twilioDot) twilioDot.className = 'status-dot status-dot-sm status-dot-online';
+    if (twilioDot) twilioDot.className = 'status-dot status-dot-sm online';
   }
 
   // ==========================================================================
@@ -563,7 +570,7 @@
   // ==========================================================================
 
   function initEventListeners() {
-    // Nav rail buttons
+    // 1. Nav rail buttons
     $$('.nav-item').forEach(btn => {
       btn.addEventListener('click', () => {
         const mode = btn.dataset.mode;
@@ -572,7 +579,7 @@
       });
     });
 
-    // Mobile nav buttons
+    // 2. Mobile bottom nav buttons
     $$('.mobile-nav-item').forEach(btn => {
       btn.addEventListener('click', () => {
         const mode = btn.dataset.mode;
@@ -581,7 +588,7 @@
       });
     });
 
-    // Right canvas tab buttons
+    // 3. Right canvas tab switcher buttons
     $$('#right-canvas-tabs .tab-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const tab = btn.dataset.tab;
@@ -590,13 +597,13 @@
       });
     });
 
-    // Settings modal close
+    // 4. Settings modal close button
     $('#btn-close-settings')?.addEventListener('click', () => {
       $('#mode-settings')?.classList.remove('active');
       playPop();
     });
 
-    // Sound toggle in header
+    // 5. Sound toggle in header
     $('#btn-sound')?.addEventListener('click', () => {
       state.soundEnabled = !state.soundEnabled;
       const toggleInSettings = $('#toggle-sound');
@@ -607,7 +614,7 @@
       if (state.soundEnabled) playPop();
     });
 
-    // Sound toggle in Settings
+    // 6. Sound toggle in Settings
     $('#toggle-sound')?.addEventListener('change', (e) => {
       state.soundEnabled = e.target.checked;
       const btn = $('#btn-sound');
@@ -615,7 +622,7 @@
       if (state.soundEnabled) playPop();
     });
 
-    // Task Dropdown toggle
+    // 7. Task Dropdown toggle
     $('#btn-pico-tasks')?.addEventListener('click', (e) => {
       e.stopPropagation();
       const dd = $('#task-dropdown');
@@ -632,7 +639,7 @@
       }
     });
 
-    // Composer Input & Send
+    // 8. Composer Input & Send Button
     const chatInput = $('#chat-input');
     const btnSend = $('#btn-send');
 
@@ -653,7 +660,7 @@
       }
     });
 
-    // Quick Prompt Chips
+    // 9. Quick Prompt Chips
     $$('.quick-chip').forEach(chip => {
       chip.addEventListener('click', () => {
         const prompt = chip.dataset.prompt;
@@ -661,21 +668,21 @@
       });
     });
 
-    // SIP Recalculate Button
+    // 10. SIP Recalculate Button
     $('#btn-recalc-sip')?.addEventListener('click', recalculateSIP);
 
-    // Markdown Loader Button
+    // 11. Markdown Loader Button
     $('#btn-load-doc')?.addEventListener('click', loadMarkdownDoc);
 
-    // Export Buttons
+    // 12. Export Buttons
     $('#btn-export')?.addEventListener('click', exportTranscript);
     $('#nav-download')?.addEventListener('click', exportTranscript);
 
-    // Stealth Screen Buttons
+    // 13. Stealth Screen Buttons
     $('#btn-stealth-start')?.addEventListener('click', () => toggleStealth(false));
     $('#btn-stealth-login')?.addEventListener('click', () => toggleStealth(false));
 
-    // Stealth mascot triple click trigger
+    // 14. Mascot click and keyboard triggers
     $('#stealth-mascot')?.addEventListener('click', () => {
       state.mascotClickCount++;
       if (state.mascotClickCount >= 3) {
@@ -684,7 +691,6 @@
       }
     });
 
-    // Double Escape to toggle stealth
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
         const now = Date.now();
@@ -702,20 +708,18 @@
   // Application Startup
   async function init() {
     initEventListeners();
-    initBriefToggle();
 
-    // Check health & poll
-    await checkHealth();
-    await pollHeartbeat();
-    await loadScorecard();
-    await loadMorningBrief();
-    await loadRoutineSpine();
-    await loadArtifacts();
-    await checkConnectors();
-    await loadMemorySection();
-    await loadTokens();
+    // Safely run initial fetches without blocking
+    try { await checkHealth(); } catch (e) {}
+    try { await pollHeartbeat(); } catch (e) {}
+    try { await loadScorecard(); } catch (e) {}
+    try { await loadRoutineSpine(); } catch (e) {}
+    try { await loadArtifacts(); } catch (e) {}
+    try { await checkConnectors(); } catch (e) {}
+    try { await loadMemorySection(); } catch (e) {}
+    try { await loadTokens(); } catch (e) {}
 
-    // Recurring polls
+    // Recurring background polls
     setInterval(pollHeartbeat, 30000);
     setInterval(checkHealth, 60000);
   }

@@ -93,19 +93,23 @@
 
     <!-- MOBILE BOTTOM NAV -->
     <nav class="mobile-nav" id="mobile-nav">
-      <button class="mobile-nav-item active" data-mode="today" data-panel="chat">
+      <button class="mobile-nav-item active" data-mode="today" data-panel="chat" id="mobile-tab-chat">
         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
         <span>Chat</span>
       </button>
-      <button class="mobile-nav-item" data-mode="today" data-panel="schedule">
+      <button class="mobile-nav-item" data-mode="today" data-panel="schedule" id="mobile-tab-schedule">
         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
         <span>Routine</span>
       </button>
-      <button class="mobile-nav-item" data-mode="memory">
+      <button class="mobile-nav-item" data-mode="today" data-panel="artifacts" id="mobile-tab-artifacts">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+        <span>Artifacts</span>
+      </button>
+      <button class="mobile-nav-item" data-mode="memory" id="mobile-tab-memory">
         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
         <span>Memory</span>
       </button>
-      <button class="mobile-nav-item" data-mode="settings">
+      <button class="mobile-nav-item" data-mode="settings" id="mobile-tab-settings">
         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.32 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
         <span>Settings</span>
       </button>
@@ -151,19 +155,8 @@
       <div class="mode-panel active" id="mode-today">
         <div class="today-layout">
 
-          <!-- CENTER COLUMN: Brief + Chat Thread + Composer -->
-          <div class="center-column" id="panel-chat">
-
-            <!-- Morning Brief Banner -->
-            <div class="brief-banner" id="brief-banner">
-              <button class="brief-header" id="brief-toggle" type="button">
-                <span class="brief-title">Morning Brief</span>
-                <span class="brief-state-pill" id="brief-state-pill">collapse</span>
-              </button>
-              <div class="brief-body" id="brief-body">
-                <p class="brief-content" id="brief-content">Loading daily brief...</p>
-              </div>
-            </div>
+          <!-- CENTER COLUMN: Chat Thread + Composer -->
+          <div class="center-column active-view" id="panel-chat">
 
             <!-- Chat Thread -->
             <div class="chat-thread" id="chat-thread">
@@ -192,8 +185,25 @@
             </div>
           </div>
 
-          <!-- RIGHT SPATIAL CANVAS: Routine Spine & Workspace Panels -->
+          <!-- RIGHT SPATIAL CANVAS: Pico Profile + Routine Spine & Workspace Panels -->
           <aside class="right-canvas" id="right-canvas">
+
+            <!-- PICO PROFILE PIC ON THE RIGHT SIDE OVER ROUTINE, ARTIFACTS, ETC. -->
+            <div class="pico-right-header" id="pico-right-header">
+              <div class="pico-right-avatar-container">
+                <img src="/static/pico_pointing_transparent.png" alt="Pico Companion Profile" class="pico-right-avatar" id="pico-right-avatar">
+                <span class="status-dot status-dot-sm online" id="pico-right-dot"></span>
+              </div>
+              <div class="pico-right-info">
+                <div class="pico-right-name-row">
+                  <h2 class="pico-right-name">Pico</h2>
+                  <span class="mono-badge">COMPANION</span>
+                </div>
+                <p class="pico-right-sub" id="pico-right-sub">Watching routine & momentum</p>
+              </div>
+            </div>
+
+            <!-- Tab Switcher (Routine, Artifacts, Skills, Connectors, MD Files) -->
             <div class="tab-switcher" id="right-canvas-tabs">
               <button class="tab-btn active" data-tab="routine" id="tab-routine">routine</button>
               <button class="tab-btn" data-tab="artifacts" id="tab-artifacts">artifacts</button>
@@ -202,7 +212,7 @@
               <button class="tab-btn" data-tab="mdfiles" id="tab-mdfiles">md files</button>
             </div>
 
-            <!-- Panel: Routine Spine -->
+            <!-- Panel: Routine Spine (Schedule) -->
             <div class="tab-panel active" id="panel-schedule">
               <div class="panel-header-row">
                 <h3 class="panel-heading">Daily Routine Spine</h3>
