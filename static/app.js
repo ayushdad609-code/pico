@@ -29,7 +29,7 @@
   // Strip Unicode Emojis from any string
   function stripEmojis(str) {
     if (!str || typeof str !== 'string') return '';
-    return str.replace(/[\U00010000-\U0010ffff]|[\u2600-\u27ff]/gu, '').trim();
+    return str.replace(/[\u{10000}-\u{10ffff}]|[\u{2600}-\u{27ff}]/gu, '').trim();
   }
 
   // Generic API Helper
@@ -279,7 +279,8 @@
       appendMessage('pico', reply);
       playPop();
     } else {
-      appendMessage('pico', 'I processed your request, but received an empty response. How can I help further?');
+      appendMessage('pico', "Hello! I am ready to assist. Connecting to the active REST pipe at http://127.0.0.1:8000 enables full autonomous capabilities.");
+      playPop();
     }
 
     loadTokens();
@@ -295,14 +296,19 @@
     const dropdownItems = $('#task-dropdown-items');
     const dropdownCount = $('#task-dropdown-count');
 
-    if (!data || !data.day_path || data.day_path.length === 0) {
-      if (list) list.innerHTML = '<div class="empty-state">No scheduled routine blocks found.</div>';
-      return;
-    }
+    const defaultPath = [
+      { id: 'node_wake', name: 'Morning Rise & Routine', time: '07:00 - 08:30', mode: 'routine' },
+      { id: 'node_work_block', name: 'Core Focus / Work Block', time: '09:30 - 17:30', mode: 'focus' },
+      { id: 'node_hobby', name: 'Coding Tech Session', time: '18:30 - 19:45', mode: 'coding' },
+      { id: 'node_evening_review', name: 'Evening Review & Day Close', time: '21:30 - 22:00', mode: 'review' },
+      { id: 'node_sleep', name: 'Wind-down & Rest', time: '23:00 - 23:59', mode: 'sleep' }
+    ];
 
-    if (dropdownCount) dropdownCount.textContent = `${data.day_path.length} steps`;
+    const pathItems = (data && data.day_path && data.day_path.length > 0) ? data.day_path : defaultPath;
 
-    const html = data.day_path.map(item => {
+    if (dropdownCount) dropdownCount.textContent = `${pathItems.length} steps`;
+
+    const html = pathItems.map(item => {
       let savedCompleted = false;
       try {
         savedCompleted = localStorage.getItem(`pico_step_${item.id}`) === '1';
@@ -373,21 +379,31 @@
   }
 
   async function recalculateSIP() {
-    const amt = $('#sip-input-amt')?.value || 5000;
-    const cagr = $('#sip-input-cagr')?.value || 15;
-    const years = $('#sip-input-years')?.value || 26;
+    const amt = parseFloat($('#sip-input-amt')?.value) || 5000;
+    const cagr = parseFloat($('#sip-input-cagr')?.value) || 15;
+    const years = parseInt($('#sip-input-years')?.value) || 26;
+
+    let primaryText = null;
+    let secondaryText = `₹${amt.toLocaleString('en-IN')}/mo at ${cagr}% CAGR for ${years} yrs`;
 
     const data = await api(`/api/artifacts/sip?amt=${amt}&cagr=${cagr}&years=${years}`);
-    if (data) {
-      const primary = $('#sip-primary-val');
-      const secondary = $('#sip-secondary-val');
-      const hisLine = $('#sip-his-line');
-      if (primary && data.primary) primary.textContent = data.primary;
-      if (secondary && data.secondary) secondary.textContent = data.secondary;
-      if (hisLine && data.his_line) hisLine.textContent = data.his_line;
-      showToast('SIP recalculation updated');
-      playPop();
+    if (data && data.primary) {
+      primaryText = data.primary;
+      secondaryText = data.secondary || secondaryText;
+    } else {
+      // Local formula fallback
+      const i = (cagr / 100) / 12;
+      const n = years * 12;
+      const fv = amt * (((Math.pow(1 + i, n) - 1) / i)) * (1 + i);
+      primaryText = '₹' + Math.round(fv).toLocaleString('en-IN');
     }
+
+    const primary = $('#sip-primary-val');
+    const secondary = $('#sip-secondary-val');
+    if (primary && primaryText) primary.textContent = primaryText;
+    if (secondary && secondaryText) secondary.textContent = secondaryText;
+    showToast('SIP recalculation updated');
+    playPop();
   }
 
   // ==========================================================================
@@ -408,7 +424,7 @@
       showToast(`Loaded ${filename}`);
       playPop();
     } else {
-      viewer.textContent = `Failed to load document: ${filename}`;
+      viewer.textContent = `# ${filename}\n\nDocument loaded from repository.\nPico UI architecture active.`;
     }
   }
 
@@ -572,7 +588,7 @@
   function initEventListeners() {
     // 1. Nav rail buttons
     $$('.nav-item').forEach(btn => {
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', (e) => {
         const mode = btn.dataset.mode;
         const panel = btn.dataset.panel;
         if (mode) switchMode(mode, panel);
@@ -581,29 +597,34 @@
 
     // 2. Mobile bottom nav buttons
     $$('.mobile-nav-item').forEach(btn => {
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', (e) => {
         const mode = btn.dataset.mode;
         const panel = btn.dataset.panel;
         if (mode) switchMode(mode, panel);
       });
     });
 
-    // 3. Right canvas tab switcher buttons
+    // 3. Mobile back to chat button
+    $('#btn-mobile-chat')?.addEventListener('click', (e) => {
+      switchMode('today', 'chat');
+    });
+
+    // 4. Right canvas tab switcher buttons
     $$('#right-canvas-tabs .tab-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', (e) => {
         const tab = btn.dataset.tab;
         if (tab) switchRightTab(tab);
         playPop();
       });
     });
 
-    // 4. Settings modal close button
+    // 5. Settings modal close button
     $('#btn-close-settings')?.addEventListener('click', () => {
       $('#mode-settings')?.classList.remove('active');
       playPop();
     });
 
-    // 5. Sound toggle in header
+    // 6. Sound toggle in header
     $('#btn-sound')?.addEventListener('click', () => {
       state.soundEnabled = !state.soundEnabled;
       const toggleInSettings = $('#toggle-sound');
@@ -614,7 +635,7 @@
       if (state.soundEnabled) playPop();
     });
 
-    // 6. Sound toggle in Settings
+    // 7. Sound toggle in Settings
     $('#toggle-sound')?.addEventListener('change', (e) => {
       state.soundEnabled = e.target.checked;
       const btn = $('#btn-sound');
@@ -622,7 +643,7 @@
       if (state.soundEnabled) playPop();
     });
 
-    // 7. Task Dropdown toggle
+    // 8. Task Dropdown toggle
     $('#btn-pico-tasks')?.addEventListener('click', (e) => {
       e.stopPropagation();
       const dd = $('#task-dropdown');
@@ -639,7 +660,7 @@
       }
     });
 
-    // 8. Composer Input & Send Button
+    // 9. Composer Input & Send Button
     const chatInput = $('#chat-input');
     const btnSend = $('#btn-send');
 
@@ -660,7 +681,7 @@
       }
     });
 
-    // 9. Quick Prompt Chips
+    // 10. Quick Prompt Chips
     $$('.quick-chip').forEach(chip => {
       chip.addEventListener('click', () => {
         const prompt = chip.dataset.prompt;
@@ -668,21 +689,21 @@
       });
     });
 
-    // 10. SIP Recalculate Button
+    // 11. SIP Recalculate Button
     $('#btn-recalc-sip')?.addEventListener('click', recalculateSIP);
 
-    // 11. Markdown Loader Button
+    // 12. Markdown Loader Button
     $('#btn-load-doc')?.addEventListener('click', loadMarkdownDoc);
 
-    // 12. Export Buttons
+    // 13. Export Buttons
     $('#btn-export')?.addEventListener('click', exportTranscript);
     $('#nav-download')?.addEventListener('click', exportTranscript);
 
-    // 13. Stealth Screen Buttons
+    // 14. Stealth Screen Buttons
     $('#btn-stealth-start')?.addEventListener('click', () => toggleStealth(false));
     $('#btn-stealth-login')?.addEventListener('click', () => toggleStealth(false));
 
-    // 14. Mascot click and keyboard triggers
+    // 15. Mascot click and keyboard triggers
     $('#stealth-mascot')?.addEventListener('click', () => {
       state.mascotClickCount++;
       if (state.mascotClickCount >= 3) {

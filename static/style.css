@@ -751,6 +751,13 @@ input, select, textarea {
   color: var(--ink-secondary);
 }
 
+.mobile-back-to-chat {
+  display: none;
+  margin-left: auto;
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
 /* Tab Switcher */
 .tab-switcher {
   display: flex;
@@ -1514,6 +1521,9 @@ input:checked + .toggle-slider:before {
   }
   .right-canvas.active-view {
     display: flex;
+  }
+  .mobile-back-to-chat {
+    display: inline-flex;
   }
   .composer {
     left: 10px;
