@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Pico — Companion Engine</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <!-- Master Navigation Bar with View Switcher (Zero Emojis) -->
+  <nav class="master-nav">
+    <div class="nav-wrapper">
+      <div class="nav-brand">
+        <span class="nav-logo-text">pico</span>
+      </div>
+
+      <!-- View Switcher Tabs -->
+      <div class="view-switcher" role="tablist">
+        <button class="switcher-btn active" data-target="duolingo" role="tab" aria-selected="true">
+          <span class="sw-text">Duolingo</span>
+        </button>
+        <button class="switcher-btn" data-target="chat" role="tab" aria-selected="false">
+          <span class="sw-text">Chat</span>
+        </button>
+        <button class="switcher-btn" data-target="settings" role="tab" aria-selected="false">
+          <span class="sw-text">Settings</span>
+        </button>
+      </div>
+
+      <div class="nav-status">
+        <span class="status-dot"></span>
+        <span class="status-name">Online</span>
+      </div>
+    </div>
+  </nav>
+
+  <!-- =========================================================================
+       PAGE 1: AUTHENTIC DUOLINGO FRONTPAGE (HERO ONLY, CLEAN & MINIMAL)
+       ========================================================================= -->
+  <section class="page-view active" id="view-duolingo">
+    <!-- Duolingo Hero Section -->
+    <section class="duo-hero">
+      <div class="duo-container duo-hero-grid">
+        <!-- Pointing Pico Mascot Presentation -->
+        <div class="duo-hero-graphic">
+          <div class="pico-mascot-container" id="pico-mascot-click">
+            <img 
+              src="/static/pico_pointing_transparent.png" 
+              alt="Pico Companion Mascot pointing at Get Started" 
+              class="pico-hero-img"
+              draggable="false"
+            >
+          </div>
+        </div>
+
+        <!-- Duolingo Hero Copy & 3D CTAs with Magic UI Border Beam -->
+        <div class="duo-hero-text bento-glow-card">
+          <div class="border-beam"></div>
+          <h1 class="duo-headline">
+            The free, fun, and effective way to master your daily momentum!
+          </h1>
+          <div class="duo-cta-box">
+            <button class="duo-btn duo-btn-primary" id="btn-duo-get-started">
+              GET STARTED
+            </button>
+            <button class="duo-btn duo-btn-secondary" id="btn-duo-login">
+              I ALREADY HAVE AN ACCOUNT
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </section>
+
+  <!-- =========================================================================
+       PAGE 2: AUTHENTIC META MUSE CHAT & WORKSPACE
+       ========================================================================= -->
+  <section class="page-view" id="view-chat">
+    <div class="muse-chat-layout">
+      <!-- Muse Sidebar: Minimal Navigation (Zero Emojis) -->
+      <aside class="muse-sidebar">
+        <div class="sidebar-top">
+          <div class="sidebar-nav-list">
+            <button class="sidebar-nav-item active" data-nav="chat">
+              <span class="nav-item-text">chat</span>
+            </button>
+            <button class="sidebar-nav-item" data-nav="connectors">
+              <span class="nav-item-text">connectors</span>
+            </button>
+            <button class="sidebar-nav-item" data-nav="skills">
+              <span class="nav-item-text">skills</span>
+            </button>
+            <button class="sidebar-nav-item" data-nav="artifacts">
+              <span class="nav-item-text">artifacts</span>
+            </button>
+            <button class="sidebar-nav-item" data-nav="mdfiles">
+              <span class="nav-item-text">md files</span>
+            </button>
+            <button class="sidebar-nav-item" data-nav="download">
+              <span class="nav-item-text">download</span>
+            </button>
+            <button class="sidebar-nav-item" data-nav="schedule">
+              <span class="nav-item-text">schedule</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- User Profile Anchored at Bottom (Zero Emojis, No Streak) -->
+        <div class="sidebar-bottom">
+          <div class="muse-user-card minimal">
+            <div class="muse-avatar">A</div>
+            <div class="muse-user-meta">
+              <strong>Ayush</strong>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Muse Chat Main Column -->
+      <div class="muse-chat-main">
+        <!-- Minimal Chat Header -->
+        <header class="muse-header minimal-header">
+          <div class="muse-header-left">
+            <span class="muse-thread-title" id="main-panel-title">Companion Chat</span>
+          </div>
+
+          <!-- Pico Picture on the Right Top -->
+          <div class="muse-header-right">
+            <button class="pico-header-btn" id="btn-pico-tasks" aria-label="Open task list" title="Today's Tasks">
+              <img src="/static/pico_pointing_transparent.png" alt="Pico" class="pico-header-avatar">
+            </button>
+
+            <!-- White Box with Task List (Flyout) -->
+            <div class="task-dropdown-box hidden" id="task-dropdown">
+              <div class="task-box-header">
+                <div class="task-box-title">
+                  <strong>Today's Tasks</strong>
+                </div>
+                <span class="task-badge" id="task-completion-badge">2/5 Done</span>
+              </div>
+              <ul class="task-list" id="task-list-items">
+                <li class="task-item completed">
+                  <input type="checkbox" id="t1" checked class="task-checkbox">
+                  <label for="t1">Morning Rise &amp; Briefing (07:00)</label>
+                </li>
+                <li class="task-item completed">
+                  <input type="checkbox" id="t2" checked class="task-checkbox">
+                  <label for="t2">Review Gmail receipts &amp; bookings</label>
+                </li>
+                <li class="task-item">
+                  <input type="checkbox" id="t3" class="task-checkbox">
+                  <label for="t3">Core Work: Ship Pico prototype</label>
+                </li>
+                <li class="task-item">
+                  <input type="checkbox" id="t4" class="task-checkbox">
+                  <label for="t4">Confirm Hair Salon appointment call</label>
+                </li>
+                <li class="task-item">
+                  <input type="checkbox" id="t5" class="task-checkbox">
+                  <label for="t5">Evening Review &amp; Streak close (21:30)</label>
+                </li>
+              </ul>
+              <div class="task-box-footer">
+                <input type="text" id="input-new-task" placeholder="Add a task..." class="new-task-input">
+                <button class="btn-add-task" id="btn-add-task">+</button>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <!-- PANEL 1: CHAT VIEW -->
+        <div class="muse-panel-view active" id="panel-chat">
+          <div class="muse-thread" id="chat-thread">
+            <div class="chat-empty-state" id="chat-empty-state">
+              <div class="empty-state-avatar">
+                <img src="/static/pico_pointing_transparent.png" alt="Pico">
+              </div>
+              <h3>How can I help you today?</h3>
+              <p>Ask anything, plan your schedule, or give Pico a task.</p>
+            </div>
+          </div>
+
+          <!-- Chat Input Bar -->
+          <div class="muse-input-area">
+            <div class="muse-input-bar">
+              <input 
+                type="text" 
+                id="chat-user-input" 
+                placeholder="Ask Pico anything..."
+                class="muse-text-input"
+              >
+              <button class="muse-send-btn" id="btn-send-chat" title="Send message">
+                <span>Send</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- PANEL 2: CONNECTORS VIEW -->
+        <div class="muse-panel-view hidden" id="panel-connectors">
+          <div class="panel-scroll-content">
+            <div class="panel-card bento-glow-card">
+              <div class="border-beam"></div>
+              <div class="panel-header-action">
+                <div>
+                  <h4>Active Context Connectors</h4>
+                  <p class="panel-desc">Real-time background sensors monitoring your browser, inbox, and voice pipes</p>
+                </div>
+                <button class="duo-btn-sm" id="btn-ping-connectors">Ping Live Endpoints</button>
+              </div>
+              
+              <div class="connector-item card-3d-hover" id="conn-chrome">
+                <div class="connector-meta">
+                  <strong>Chrome DevTools Protocol (CDP)</strong>
+                  <span>Endpoint: 127.0.0.1:9222 • Domain categorization</span>
+                </div>
+                <div class="connector-status-group">
+                  <span class="ping-latency" id="ping-chrome">1ms</span>
+                  <span class="status-chip active">Connected</span>
+                </div>
+              </div>
+
+              <div class="connector-item card-3d-hover" id="conn-gmail">
+                <div class="connector-meta">
+                  <strong>Gmail Event &amp; Receipt Watcher</strong>
+                  <span>IMAP SSL • Booking extraction &amp; PNR detection</span>
+                </div>
+                <div class="connector-status-group">
+                  <span class="ping-latency" id="ping-gmail">Standby</span>
+                  <span class="status-chip standby">Standby (.env)</span>
+                </div>
+              </div>
+
+              <div class="connector-item card-3d-hover" id="conn-twilio">
+                <div class="connector-meta">
+                  <strong>Twilio Telephony WebSocket</strong>
+                  <span>Media Stream G.711 &mu;-law audio duplex</span>
+                </div>
+                <div class="connector-status-group">
+                  <span class="ping-latency" id="ping-twilio">Ready</span>
+                  <span class="status-chip active">Ready</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- PANEL 3: SKILLS VIEW -->
+        <div class="muse-panel-view hidden" id="panel-skills">
+          <div class="panel-scroll-content">
+            <div class="panel-card">
+              <h4>Installed Skills</h4>
+              <p class="panel-desc">Sandboxed agent capabilities loaded from the repository</p>
+              
+              <div class="skills-grid">
+                <div class="skill-box">
+                  <strong>browser_agent</strong>
+                  <p>Cloud web page reader with SSRF filter and input sanitation.</p>
+                </div>
+                <div class="skill-box">
+                  <strong>pomodoro_planner</strong>
+                  <p>25/5 and 50/10 focus intervals with burnout mitigation.</p>
+                </div>
+                <div class="skill-box">
+                  <strong>script_doctor</strong>
+                  <p>Shorts &amp; Reels hook scorer and speech runtime estimator.</p>
+                </div>
+                <div class="skill-box">
+                  <strong>macro_calculator</strong>
+                  <p>Mifflin-St Jeor TDEE calculator tailored for Indian diets.</p>
+                </div>
+                <div class="skill-box">
+                  <strong>level_calculator</strong>
+                  <p>Fibonacci Golden Pocket levels (SEBI non-advisory compliant).</p>
+                </div>
+                <div class="skill-box">
+                  <strong>food_lookup</strong>
+                  <p>Curated nutrition and calorie reference database.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Card 2: Component Registries & Design Engineering -->
+            <div class="panel-card" style="margin-top: 16px;">
+              <h4>Component Libraries &amp; Registries</h4>
+              <p class="panel-desc">Curated design engineering registries, generative UI tools, and copy-paste components</p>
+
+              <div class="skills-grid">
+                <!-- 21st.dev -->
+                <div class="component-box">
+                  <div>
+                    <div class="component-header">
+                      <a href="https://21st.dev" target="_blank" rel="noopener" class="component-title-link">21st.dev</a>
+                      <span class="component-tag">Design Registry</span>
+                    </div>
+                    <p class="component-desc">The npm for design engineers. Production-ready React, Tailwind, and Framer Motion UI blocks.</p>
+                  </div>
+                  <div class="component-cmd-row">
+                    <span>npx 21st add &lt;item&gt;</span>
+                    <a href="https://21st.dev" target="_blank" rel="noopener" class="component-visit-link">Visit &rarr;</a>
+                  </div>
+                </div>
+
+                <!-- v0 by Vercel -->
+                <div class="component-box">
+                  <div>
+                    <div class="component-header">
+                      <a href="https://v0.dev" target="_blank" rel="noopener" class="component-title-link">v0 by Vercel</a>
+                      <span class="component-tag">Generative UI</span>
+                    </div>
+                    <p class="component-desc">Vercel AI engine that generates production-grade React layouts and shadcn/ui components from prompts.</p>
+                  </div>
+                  <div class="component-cmd-row">
+                    <span>npx v0 add &lt;block-id&gt;</span>
+                    <a href="https://v0.dev" target="_blank" rel="noopener" class="component-visit-link">Visit &rarr;</a>
+                  </div>
+                </div>
+
+                <!-- shadcn/ui -->
+                <div class="component-box">
+                  <div>
+                    <div class="component-header">
+                      <a href="https://ui.shadcn.com" target="_blank" rel="noopener" class="component-title-link">shadcn/ui</a>
+                      <span class="component-tag">Primitives</span>
+                    </div>
+                    <p class="component-desc">Accessible, customizable component system built on Radix UI and Tailwind CSS tokens.</p>
+                  </div>
+                  <div class="component-cmd-row">
+                    <span>npx shadcn@latest add &lt;component&gt;</span>
+                    <a href="https://ui.shadcn.com" target="_blank" rel="noopener" class="component-visit-link">Visit &rarr;</a>
+                  </div>
+                </div>
+
+                <!-- Magic UI -->
+                <div class="component-box">
+                  <div>
+                    <div class="component-header">
+                      <a href="https://magicui.design" target="_blank" rel="noopener" class="component-title-link">Magic UI</a>
+                      <span class="component-tag">Motion Blocks</span>
+                    </div>
+                    <p class="component-desc">150+ free animated components. Bento grids, border beams, animated marquees, and confetti.</p>
+                  </div>
+                  <div class="component-cmd-row">
+                    <span>npx shadcn add https://magicui.design/r/&lt;item&gt;</span>
+                    <a href="https://magicui.design" target="_blank" rel="noopener" class="component-visit-link">Visit &rarr;</a>
+                  </div>
+                </div>
+
+                <!-- Aceternity UI -->
+                <div class="component-box">
+                  <div>
+                    <div class="component-header">
+                      <a href="https://ui.aceternity.com" target="_blank" rel="noopener" class="component-title-link">Aceternity UI</a>
+                      <span class="component-tag">3D &amp; Shaders</span>
+                    </div>
+                    <p class="component-desc">Modern visual components featuring Framer Motion 3D cards, lamp glow, sparkles, and canvas shaders.</p>
+                  </div>
+                  <div class="component-cmd-row">
+                    <span>npm install framer-motion clsx</span>
+                    <a href="https://ui.aceternity.com" target="_blank" rel="noopener" class="component-visit-link">Visit &rarr;</a>
+                  </div>
+                </div>
+
+                <!-- Origin UI -->
+                <div class="component-box">
+                  <div>
+                    <div class="component-header">
+                      <a href="https://originui.com" target="_blank" rel="noopener" class="component-title-link">Origin UI</a>
+                      <span class="component-tag">Inputs &amp; Forms</span>
+                    </div>
+                    <p class="component-desc">Extensive collection of accessible form controls, inputs, selects, switches, sliders, and tooltips.</p>
+                  </div>
+                  <div class="component-cmd-row">
+                    <span>Radix UI + Tailwind Controls</span>
+                    <a href="https://originui.com" target="_blank" rel="noopener" class="component-visit-link">Visit &rarr;</a>
+                  </div>
+                </div>
+
+                <!-- Uiverse.io -->
+                <div class="component-box">
+                  <div>
+                    <div class="component-header">
+                      <a href="https://uiverse.io" target="_blank" rel="noopener" class="component-title-link">Uiverse.io</a>
+                      <span class="component-tag">CSS &amp; Tailwind</span>
+                    </div>
+                    <p class="component-desc">4,000+ community-built micro-elements, animated buttons, loaders, hover effects, and cards.</p>
+                  </div>
+                  <div class="component-cmd-row">
+                    <span>Pure HTML / CSS / Tailwind</span>
+                    <a href="https://uiverse.io" target="_blank" rel="noopener" class="component-visit-link">Visit &rarr;</a>
+                  </div>
+                </div>
+
+                <!-- Cult UI -->
+                <div class="component-box">
+                  <div>
+                    <div class="component-header">
+                      <a href="https://cult-ui.com" target="_blank" rel="noopener" class="component-title-link">Cult UI</a>
+                      <span class="component-tag">Micro-Interactions</span>
+                    </div>
+                    <p class="component-desc">Crafted design engineering pieces: dynamic islands, audio-triggered buttons, and canvas shaders.</p>
+                  </div>
+                  <div class="component-cmd-row">
+                    <span>Interactive Source Code</span>
+                    <a href="https://cult-ui.com" target="_blank" rel="noopener" class="component-visit-link">Visit &rarr;</a>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- PANEL 4: ARTIFACTS VIEW -->
+        <div class="muse-panel-view hidden" id="panel-artifacts">
+          <div class="panel-scroll-content">
+            <div class="panel-card">
+              <h4>Living Artifacts</h4>
+              <p class="panel-desc">Dynamic calculators and trajectory trackers that stay alive</p>
+
+              <div class="artifact-box card-3d-hover">
+                <div class="artifact-meta">
+                  <span class="artifact-tag">ARTIFACT 1</span>
+                  <h5>SIP Compounding Superpower</h5>
+                </div>
+                <div class="artifact-calc-result" id="artifact-sip-val">₹1,91,25,123</div>
+                <p class="artifact-sub" id="artifact-sip-sub">Invested: ₹15,60,000 • Returns: ₹1,75,65,123 (15% CAGR, 26 Years)</p>
+                
+                <div class="artifact-breakdown-bar">
+                  <div class="bar-invested" id="bar-invested" style="width: 8%;"></div>
+                  <div class="bar-returns" id="bar-returns" style="width: 92%;"></div>
+                </div>
+                <div class="artifact-legend">
+                  <span><span class="legend-dot invested"></span>Invested: <strong id="legend-invested">₹15.6L</strong></span>
+                  <span><span class="legend-dot returns"></span>Gain: <strong id="legend-returns">₹1.75Cr</strong></span>
+                </div>
+
+                <div class="artifact-slider-wrap" style="margin-top: 14px;">
+                  <label for="artifact-slider">Monthly Investment: <strong id="artifact-amt-label">₹5,000</strong></label>
+                  <input type="range" id="artifact-slider" min="1000" max="50000" step="1000" value="5000" class="duo-slider">
+                </div>
+              </div>
+
+              <div class="artifact-box card-3d-hover" style="margin-top: 16px;">
+                <div class="artifact-meta">
+                  <span class="artifact-tag">ARTIFACT 2</span>
+                  <h5>90-Day Trajectory Tracker</h5>
+                </div>
+                <p class="trajectory-text">"Ship the first live prototype of Pico with 10 testers on Termux, connect cloud voice telephony, and protect quiet hours."</p>
+                <div class="progress-bar-thin">
+                  <div class="progress-fill" style="width: 28%;"></div>
+                </div>
+                <span class="progress-label">Day 14 of 90 • Momentum Preserved</span>
+
+                <div class="trajectory-milestones">
+                  <div class="milestone-item done">
+                    <span class="milestone-status">DONE</span>
+                    <span class="milestone-title">Core Termux Architecture &amp; SQLite Memory</span>
+                  </div>
+                  <div class="milestone-item done">
+                    <span class="milestone-status">DONE</span>
+                    <span class="milestone-title">Voice Telephony &amp; Hardware Echo Cancellation</span>
+                  </div>
+                  <div class="milestone-item active">
+                    <span class="milestone-status active">ACTIVE</span>
+                    <span class="milestone-title">20 Hobbies Domain Graph &amp; Routine Spine</span>
+                  </div>
+                  <div class="milestone-item pending">
+                    <span class="milestone-status pending">QUEUED</span>
+                    <span class="milestone-title">10 Testers Kill-Test Evaluation Suite</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- PANEL 5: MD FILES VIEW -->
+        <div class="muse-panel-view hidden" id="panel-mdfiles">
+          <div class="panel-scroll-content">
+            <div class="panel-card">
+              <h4>Repository Markdown Files</h4>
+              <p class="panel-desc">Documentation, specifications, and daily briefings (Click any document to inspect)</p>
+              
+              <ul class="file-list">
+                <li class="file-item card-3d-hover" data-path="docs/pico_ui_brief.md">
+                  <span class="file-name">docs/pico_ui_brief.md</span>
+                  <span class="file-meta">Pico UI Design &amp; Architecture Specification</span>
+                </li>
+                <li class="file-item card-3d-hover" data-path="README.md">
+                  <span class="file-name">README.md</span>
+                  <span class="file-meta">Pico Master Architecture &amp; Skill System</span>
+                </li>
+                <li class="file-item card-3d-hover" data-path="docs/superpowers/specs/2026-11-06-native-call-agent-design.md">
+                  <span class="file-name">docs/superpowers/specs/2026-11-06-native-call-agent-design.md</span>
+                  <span class="file-meta">Voice Telephony &amp; Hardware Acoustic Spike</span>
+                </li>
+                <li class="file-item card-3d-hover" data-path="docs/superpowers/plans/2026-11-07-native-call-voice-agent.md">
+                  <span class="file-name">docs/superpowers/plans/2026-11-07-native-call-voice-agent.md</span>
+                  <span class="file-meta">Twilio WebSocket Implementation Plan</span>
+                </li>
+              </ul>
+
+              <!-- Interactive Document Reader Box (Origin UI / 21st.dev style) -->
+              <div class="md-viewer-box hidden" id="md-viewer-box">
+                <div class="md-viewer-header">
+                  <div>
+                    <span class="md-viewer-badge">DOCUMENT VIEWER</span>
+                    <h5 id="md-viewer-title">docs/pico_ui_brief.md</h5>
+                  </div>
+                  <button class="duo-btn-sm" id="btn-close-md-viewer">Close Preview</button>
+                </div>
+                <pre class="md-viewer-pre"><code id="md-viewer-code">Loading...</code></pre>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- PANEL 6: SCHEDULE VIEW -->
+        <div class="muse-panel-view hidden" id="panel-schedule">
+          <div class="panel-scroll-content">
+            <div class="panel-card">
+              <h4>24-Hour Daily Spine</h4>
+              <p class="panel-desc">Routine nodes protecting quiet hours (22:00 &ndash; 07:00)</p>
+
+              <div class="schedule-table">
+                <div class="schedule-row">
+                  <span class="sched-time">07:00 &ndash; 08:30</span>
+                  <span class="sched-title">Morning Rise &amp; Briefing</span>
+                  <span class="sched-tag">Essential</span>
+                </div>
+                <div class="schedule-row current">
+                  <span class="sched-time">09:30 &ndash; 17:30</span>
+                  <span class="sched-title">Core Focus &amp; Coding Block</span>
+                  <span class="sched-tag">Active</span>
+                </div>
+                <div class="schedule-row">
+                  <span class="sched-time">18:30 &ndash; 19:45</span>
+                  <span class="sched-title">Activity &amp; Gym Session</span>
+                  <span class="sched-tag">Fitness</span>
+                </div>
+                <div class="schedule-row">
+                  <span class="sched-time">21:30 &ndash; 22:00</span>
+                  <span class="sched-title">Evening Review &amp; Day Close</span>
+                  <span class="sched-tag">Review</span>
+                </div>
+                <div class="schedule-row quiet">
+                  <span class="sched-time">22:00 &ndash; 07:00</span>
+                  <span class="sched-title">Quiet Hours (Wind-down &amp; Sleep)</span>
+                  <span class="sched-tag">Protected</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- =========================================================================
+       PAGE 3: AUTHENTIC META MUSE SETTINGS (ZERO EMOJIS)
+       ========================================================================= -->
+  <section class="page-view" id="view-settings">
+    <div class="muse-settings-container">
+      <div class="settings-sidebar">
+        <h3>Settings</h3>
+        <ul class="settings-nav">
+          <li class="active" data-sec="profile">Profile &amp; Goals</li>
+          <li data-sec="voice">Voice &amp; Telephony</li>
+          <li data-sec="spine">Daily Spine &amp; Quiet Hours</li>
+          <li data-sec="watchers">Chrome &amp; Gmail Watchers</li>
+          <li data-sec="memory">Staging Memory</li>
+          <li data-sec="tokens">Token Quota (40M)</li>
+        </ul>
+      </div>
+
+      <div class="settings-content">
+        <!-- Section: Profile & Goals -->
+        <div class="settings-card" id="sec-profile">
+          <div class="card-title">
+            <h4>Profile &amp; 90-Day Trajectory</h4>
+            <p>Customize how Pico addresses and relates with you</p>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Full Name</label>
+              <input type="text" value="Ayush Sharma" class="muse-input" id="set-name">
+            </div>
+            <div class="form-group">
+              <label>Nickname</label>
+              <input type="text" value="Ayush" class="muse-input" id="set-nickname">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Primary Launchpad Category</label>
+            <select class="muse-select" id="set-category">
+              <option selected>Coding &amp; Tech</option>
+              <option>Gym &amp; Fitness</option>
+              <option>Business &amp; Startups</option>
+              <option>Stock Market</option>
+              <option>Content Creation</option>
+              <option>Just want a friend</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>90-Day Trajectory Goal</label>
+            <textarea class="muse-textarea" rows="3" id="set-goal">Ship the first live prototype of Pico with 10 testers on Termux, connect full-duplex cloud voice telephony, and protect personal quiet hours.</textarea>
+            <div class="word-counter-badge" id="set-word-count">21 / 20 words Pass</div>
+          </div>
+
+          <div class="card-footer-action">
+            <button class="duo-btn duo-btn-primary" id="btn-save-profile">Save Profile Changes</button>
+          </div>
+        </div>
+
+        <!-- Section: Voice & Telephony -->
+        <div class="settings-card hidden" id="sec-voice">
+          <div class="card-title">
+            <h4>Voice Telephony Engine</h4>
+            <p>Twilio cloud media stream and strict Ask-First gates</p>
+          </div>
+
+          <div class="form-group">
+            <label>Telephony Backend</label>
+            <select class="muse-select" id="set-telephony-backend">
+              <option selected>Twilio WebSocket Media Stream (Cloud)</option>
+              <option>Native Android SIM (Termux Telephony)</option>
+            </select>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Twilio Account SID</label>
+              <input type="text" value="YOUR_TWILIO_ACCOUNT_SID" class="muse-input mono" readonly>
+            </div>
+            <div class="form-group">
+              <label>Authority Level Gate</label>
+              <select class="muse-select">
+                <option>L0 &mdash; Read-only observation</option>
+                <option>L1 &mdash; Reversible drafting</option>
+                <option selected>L2 &mdash; Live Call (Ask-First Required)</option>
+                <option disabled>L3 &mdash; Financial Binding (Hard-Blocked)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="toggle-group">
+            <div class="toggle-info">
+              <strong>Silero VAD Barge-In (&lt;50ms)</strong>
+              <span>Immediately silences assistant speech when callee speaks</span>
+            </div>
+            <input type="checkbox" checked class="muse-switch">
+          </div>
+        </div>
+
+        <!-- Section: Daily Spine & Quiet Hours -->
+        <div class="settings-card hidden" id="sec-spine">
+          <div class="card-title">
+            <h4>Daily Spine &amp; Quiet Hours</h4>
+            <p>Guaranteed protection of your sleep schedule</p>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Wake Time (Morning Brief)</label>
+              <input type="time" value="07:00" class="muse-input">
+            </div>
+            <div class="form-group">
+              <label>Sleep Time (Wind-down)</label>
+              <input type="time" value="23:00" class="muse-input">
+            </div>
+          </div>
+
+          <div class="toggle-group">
+            <div class="toggle-info">
+              <strong>Strict Quiet Hours (22:00 &ndash; 07:00)</strong>
+              <span>Blocks non-critical pushes, notifications, and background pings</span>
+            </div>
+            <input type="checkbox" checked class="muse-switch">
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Origin UI Style Toast Notification (Zero Emojis) -->
+  <div class="origin-toast hidden" id="origin-toast" role="status" aria-live="polite">
+    <span class="toast-dot"></span>
+    <span class="toast-message" id="toast-message">Copied to clipboard</span>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

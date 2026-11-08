@@ -20,6 +20,45 @@ def test_api_health_endpoint():
     asyncio.run(_test())
 
 
+def test_api_get_started_page_endpoint():
+    async def _test():
+        server = PicoServer(":memory:")
+        req = make_mocked_request("GET", "/")
+        resp = await server.handle_index(req)
+        assert resp.status == 200
+        assert resp.content_type == "text/html"
+        html = resp.body.decode("utf-8")
+        assert "GET STARTED" in html
+        assert "pico_pointing_transparent.png" in html
+        assert "duo-hero" in html
+        assert "muse-chat-layout" in html
+        assert "view-switcher" in html
+        assert "connectors" in html
+        assert "skills" in html
+        assert "artifacts" in html
+        assert "md files" in html
+        assert "download" in html
+        assert "schedule" in html
+        assert "btn-pico-tasks" in html
+        assert "task-dropdown" in html
+        assert "● LIVE CALL SESSION" not in html
+        assert "waiting for the barber opening confirmation call" not in html
+        assert "CODING & TECH" not in html
+        assert "Streaks keep you in the zone" not in html
+        assert "Zero-surprise phone calls" not in html
+        assert "A friend you can actually trust" not in html
+        assert "Start your momentum today" not in html
+        assert "About Us" not in html
+        assert "panel-connectors" in html
+        assert "panel-skills" in html
+        assert "21st.dev" in html
+        assert "v0 by Vercel" in html
+        assert "panel-artifacts" in html
+        assert "panel-mdfiles" in html
+        assert "panel-schedule" in html
+    asyncio.run(_test())
+
+
 def test_api_what_i_know_endpoint():
     async def _test():
         server = PicoServer(":memory:")
@@ -106,5 +145,22 @@ def test_api_chrome_and_gmail_endpoints():
         assert resp_gmail.status == 200
         data_gmail = json.loads(resp_gmail.body.decode("utf-8"))
         assert data_gmail["configured"] is False
+    asyncio.run(_test())
+
+
+def test_api_docs_endpoint():
+    async def _test():
+        server = PicoServer(":memory:")
+        req = make_mocked_request("GET", "/api/docs/docs/pico_ui_brief.md", match_info={"filename": "docs/pico_ui_brief.md"})
+        resp = await server.handle_get_doc(req)
+        assert resp.status == 200
+        data = json.loads(resp.body.decode("utf-8"))
+        assert "Pico UI Design & Architecture Brief" in data["content"]
+        assert data["filename"] == "docs/pico_ui_brief.md"
+
+        # Traversal protection test
+        req_bad = make_mocked_request("GET", "/api/docs/../../../etc/passwd", match_info={"filename": "../../../etc/passwd"})
+        resp_bad = await server.handle_get_doc(req_bad)
+        assert resp_bad.status in (403, 404)
     asyncio.run(_test())
 

@@ -3,6 +3,7 @@ Asynchronous HTTP REST API Server for Pico.
 Allows any frontend (mobile app, web UI, curl) to communicate with Pico.
 """
 
+import os
 import json
 from typing import Optional
 from aiohttp import web
@@ -23,11 +24,14 @@ from .paths import get_default_db_path
 from .chrome_watcher import ChromeWatcher
 from .gmail_watcher import GmailWatcher, extract_events_from_message
 
+STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
+INDEX_HTML = os.path.join(STATIC_DIR, "index.html")
+
 
 class PicoServer:
     def __init__(self, db_path: Optional[str] = None):
         self.db_path = db_path or get_default_db_path()
-        self.memory = MemoryStore(db_path)
+        self.memory = MemoryStore(self.db_path)
         self.pipeline = PipelineEngine(self.memory)
         self.watcher_engine = PriceWatcherEngine()
         self.token_manager = TokenManager()
@@ -53,6 +57,12 @@ class PicoServer:
         self._setup_routes()
 
     def _setup_routes(self):
+        # Frontend UI & Static Assets
+        if os.path.isdir(STATIC_DIR):
+            self.app.router.add_static("/static", path=STATIC_DIR, name="static")
+        self.app.router.add_get("/", self.handle_index)
+        self.app.router.add_get("/ui", self.handle_index)
+
         self.app.router.add_get("/api/health", self.health_check)
         self.app.router.add_post("/api/chat", self.handle_chat)
         self.app.router.add_get("/api/what-i-know", self.handle_what_i_know)
@@ -70,6 +80,27 @@ class PicoServer:
         self.app.router.add_get("/api/events/gmail", self.handle_gmail_events)
         self.app.router.add_get("/api/events/chrome", self.handle_chrome_tabs)
         self.app.router.add_post("/api/events/chrome", self.handle_chrome_tab_post)
+        self.app.router.add_get("/api/docs/{filename:.*}", self.handle_get_doc)
+
+    async def handle_index(self, request):
+        if os.path.isfile(INDEX_HTML):
+            with open(INDEX_HTML, "r", encoding="utf-8") as f:
+                content = f.read()
+            return web.Response(text=content, content_type="text/html")
+        return web.Response(text="<h1>Pico Companion UI not found</h1>", status=404, content_type="text/html")
+
+    async def handle_get_doc(self, request):
+        filename = request.match_info.get("filename", "")
+        clean_path = os.path.normpath(filename).lstrip("/")
+        if ".." in clean_path:
+            return web.json_response({"error": "Forbidden path"}, status=403)
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        target_path = os.path.join(base_dir, clean_path)
+        if not os.path.isfile(target_path) or not clean_path.endswith((".md", ".txt", ".json")):
+            return web.json_response({"error": "File not found"}, status=404)
+        with open(target_path, "r", encoding="utf-8") as f:
+            content = f.read()
+        return web.json_response({"filename": clean_path, "content": content})
 
     async def health_check(self, request):
         return web.json_response({
@@ -243,4 +274,4 @@ def create_app():
 
 if __name__ == "__main__":
     server = PicoServer()
-    web.run_app(server.app, host="127.0.0.1", port=8000)
+    web.run_app(server.app, host="0.0.0.0", port=8000)
