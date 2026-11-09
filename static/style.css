@@ -763,8 +763,8 @@ input, select, textarea {
   display: flex;
   border-bottom: 1px solid var(--border-hairline);
   background: var(--bg-subtle);
-  padding: 4px;
-  gap: 4px;
+  padding: 4px 6px;
+  gap: 3px;
   flex-shrink: 0;
 }
 
@@ -773,21 +773,22 @@ input, select, textarea {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 5px;
-  padding: 7px 4px;
-  font-size: 11px;
-  font-weight: 700;
+  gap: 4px;
+  padding: 5px 3px;
+  font-size: 10px;
+  font-weight: 600;
   color: var(--ink-secondary);
   border-radius: var(--radius-sm);
   text-align: center;
   transition: all 120ms ease;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.01em;
   white-space: nowrap;
 }
 
 .tab-icon {
-  width: 13px;
-  height: 13px;
+  width: 10px;
+  height: 10px;
+  stroke-width: 2.2;
   flex-shrink: 0;
 }
 
