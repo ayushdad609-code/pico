@@ -147,12 +147,12 @@
   }
 
   function switchRightTab(tabKey) {
-    const canonicalKey = (tabKey === 'schedule' || tabKey === 'routine') ? 'routine' : tabKey;
+    const canonicalKey = (tabKey === 'schedule' || tabKey === 'routine' || tabKey === 'tasks') ? 'tasks' : tabKey;
     state.activeRightTab = canonicalKey;
 
     // Update Tab Switcher Buttons
     $$('#right-canvas-tabs .tab-btn').forEach(btn => {
-      if (btn.dataset.tab === canonicalKey || (canonicalKey === 'routine' && btn.dataset.tab === 'routine')) {
+      if (btn.dataset.tab === canonicalKey || (canonicalKey === 'tasks' && (btn.dataset.tab === 'tasks' || btn.dataset.tab === 'routine'))) {
         btn.classList.add('active');
       } else {
         btn.classList.remove('active');
@@ -160,8 +160,13 @@
     });
 
     const panelMap = {
+      tasks: 'panel-schedule',
       routine: 'panel-schedule',
       schedule: 'panel-schedule',
+      approvals: 'panel-approvals',
+      heartbeat: 'panel-heartbeat',
+      soul: 'panel-soul',
+      memory: 'panel-memory',
       artifacts: 'panel-artifacts',
       skills: 'panel-skills',
       connectors: 'panel-connectors',
@@ -213,11 +218,19 @@
     if (beat && state.online) {
       const text = $('#status-text');
       const rightSub = $('#pico-right-sub');
+      const hbNum = $('#hb-beat-number');
+      const hbLabel = $('#hb-status-label');
       if (text && beat.outcome) {
         text.textContent = `Pico beat #${beat.beat_number} (${beat.outcome})`;
       }
       if (rightSub && beat.outcome) {
         rightSub.textContent = `Heartbeat #${beat.beat_number} active`;
+      }
+      if (hbNum && beat.beat_number) {
+        hbNum.textContent = `Beat #${beat.beat_number}`;
+      }
+      if (hbLabel && beat.outcome) {
+        hbLabel.textContent = `Outcome: ${beat.outcome} • Every 30s`;
       }
     }
   }
@@ -494,9 +507,14 @@
     const data = await api('/api/what-i-know');
     const container = $('#memory-cards');
     const badge = $('#memory-count-badge');
+    const rightContainer = $('#right-memory-list');
+    const rightCount = $('#right-memory-count');
+    const rightRefl = $('#right-memory-reflection');
 
     if (data && data.facts && data.facts.length > 0) {
       if (badge) badge.textContent = `${data.facts.length} facts`;
+      if (rightCount) rightCount.textContent = `${data.facts.length} facts`;
+
       container.innerHTML = data.facts.map(fact => `
         <div class="memory-card">
           <div class="memory-key">${stripEmojis(fact.key)}</div>
@@ -504,15 +522,28 @@
           <div class="memory-meta mono">Source: ${fact.source} | Mode: ${fact.mode || 'general'}</div>
         </div>
       `).join('');
+
+      if (rightContainer) {
+        rightContainer.innerHTML = data.facts.map(fact => `
+          <div class="memory-fact-item">
+            <div class="memory-fact-key">${stripEmojis(fact.key)}</div>
+            <div class="memory-fact-val">${stripEmojis(String(fact.value))}</div>
+            <div class="memory-fact-meta mono">Source: ${fact.source} • Mode: ${fact.mode || 'general'}</div>
+          </div>
+        `).join('');
+      }
     } else {
       if (container) container.innerHTML = '<div class="empty-state">Hermes is still learning your preferences.</div>';
+      if (rightContainer) rightContainer.innerHTML = '<div class="empty-state">No memory facts committed yet.</div>';
     }
 
     // 2. Reflection
     const rev = await api('/api/review');
     const revContainer = $('#review-cards');
-    if (rev && rev.evening_review && revContainer) {
-      revContainer.textContent = stripEmojis(rev.evening_review);
+    if (rev && rev.evening_review) {
+      const cleanedRev = stripEmojis(rev.evening_review);
+      if (revContainer) revContainer.textContent = cleanedRev;
+      if (rightRefl) rightRefl.textContent = cleanedRev;
     }
   }
 
@@ -699,7 +730,43 @@
     $('#btn-export')?.addEventListener('click', exportTranscript);
     $('#nav-download')?.addEventListener('click', exportTranscript);
 
-    // 14. Stealth Screen Buttons
+    // 14. Heartbeat Pulse Now Button
+    $('#btn-fire-heartbeat')?.addEventListener('click', async () => {
+      await pollHeartbeat();
+      showToast('Heartbeat pulse fired');
+      playPop();
+    });
+
+    // 15. Approvals Action Buttons
+    $$('.btn-approve').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const card = btn.closest('.approval-card');
+        if (card) {
+          card.classList.remove('declined');
+          card.classList.add('approved');
+        }
+        btn.textContent = 'Approved ✓';
+        btn.disabled = true;
+        showToast('Authority gate action approved');
+        playPop();
+      });
+    });
+
+    $$('.btn-decline').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const card = btn.closest('.approval-card');
+        if (card) {
+          card.classList.remove('approved');
+          card.classList.add('declined');
+        }
+        btn.textContent = 'Declined';
+        btn.disabled = true;
+        showToast('Authority gate action declined');
+        playPop();
+      });
+    });
+
+    // 16. Stealth Screen Buttons
     $('#btn-stealth-start')?.addEventListener('click', () => toggleStealth(false));
     $('#btn-stealth-login')?.addEventListener('click', () => toggleStealth(false));
 

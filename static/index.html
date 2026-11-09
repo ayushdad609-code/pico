@@ -204,23 +204,172 @@
               <button class="tactile-btn mobile-back-to-chat" id="btn-mobile-chat" title="Return to chat">Chat</button>
             </div>
 
-            <!-- Tab Switcher (Routine, Artifacts, Skills, Connectors, MD Files) -->
-            <div class="tab-switcher" id="right-canvas-tabs">
-              <button class="tab-btn active" data-tab="routine" id="tab-routine">routine</button>
-              <button class="tab-btn" data-tab="artifacts" id="tab-artifacts">artifacts</button>
-              <button class="tab-btn" data-tab="skills" id="tab-skills">skills</button>
-              <button class="tab-btn" data-tab="connectors" id="tab-connectors">connectors</button>
-              <button class="tab-btn" data-tab="mdfiles" id="tab-mdfiles">md files</button>
+            <!-- Tab Switcher Under Pico's Logo: tasks, approvals, heartbeat, soul.md (blue), memory (red) -->
+            <div class="tab-switcher pico-tabs" id="right-canvas-tabs">
+              <button class="tab-btn active" data-tab="tasks" id="tab-tasks" title="Daily Tasks">
+                <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                <span>tasks</span>
+              </button>
+              <button class="tab-btn" data-tab="approvals" id="tab-approvals" title="Ask-First Approvals">
+                <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+                <span>approvals</span>
+              </button>
+              <button class="tab-btn" data-tab="heartbeat" id="tab-heartbeat" title="Live Heartbeat">
+                <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                <span>heartbeat</span>
+              </button>
+              <button class="tab-btn tab-btn-soul" data-tab="soul" id="tab-soul" title="Soul Constitution">
+                <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></svg>
+                <span>soul.md</span>
+              </button>
+              <button class="tab-btn tab-btn-memory" data-tab="memory" id="tab-memory" title="Hermes Memory">
+                <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+                <span>memory</span>
+              </button>
             </div>
 
-            <!-- Panel: Routine Spine (Schedule) -->
+            <!-- Panel 1: Tasks & Routine Spine (Schedule) -->
             <div class="tab-panel active" id="panel-schedule">
               <div class="panel-header-row">
-                <h3 class="panel-heading">Daily Routine Spine</h3>
+                <h3 class="panel-heading">Daily Tasks & Routine</h3>
                 <span class="mono-badge" id="routine-active-tag">Active</span>
               </div>
               <div class="routine-list" id="routine-list">
-                <div class="empty-state" id="routine-empty">Loading routine...</div>
+                <div class="empty-state" id="routine-empty">Loading tasks...</div>
+              </div>
+            </div>
+
+            <!-- Panel 2: Ask-First Approvals Queue -->
+            <div class="tab-panel" id="panel-approvals">
+              <div class="panel-header-row">
+                <h3 class="panel-heading">Ask-First Approvals</h3>
+                <span class="mono-badge">Strict Gate</span>
+              </div>
+              <div class="approvals-container">
+                <div class="approval-card">
+                  <div class="approval-level-tag">LEVEL 2 • PHONE CALL BRIDGE</div>
+                  <div class="approval-title">Barber Opening Confirmation</div>
+                  <div class="approval-desc">Pico wants to initiate a full-duplex WebSocket call via Twilio to check appointment availability.</div>
+                  <div class="approval-meta mono">Action: /api/telephony/media-stream • Target: +1-555-0199</div>
+                  <div class="approval-actions">
+                    <button class="tactile-btn tactile-btn-primary btn-approve" data-id="appr-1">Approve Tap</button>
+                    <button class="tactile-btn btn-decline" data-id="appr-1">Decline</button>
+                  </div>
+                </div>
+                <div class="approval-card">
+                  <div class="approval-level-tag">LEVEL 1 • BACKGROUND ACTION</div>
+                  <div class="approval-title">Digest 3 Gmail Invoices</div>
+                  <div class="approval-desc">Auto-extract subscription dates from Google Play receipts and add to expense tracker.</div>
+                  <div class="approval-meta mono">Action: /api/events/gmail • Type: Receipt Scan</div>
+                  <div class="approval-actions">
+                    <button class="tactile-btn tactile-btn-primary btn-approve" data-id="appr-2">Approve</button>
+                    <button class="tactile-btn btn-decline" data-id="appr-2">Decline</button>
+                  </div>
+                </div>
+                <div class="gate-legend">
+                  <div class="legend-row"><span class="legend-dot dot-l0"></span> L0 Observation: Chrome tabs & background telemetry</div>
+                  <div class="legend-row"><span class="legend-dot dot-l1"></span> L1 Reversible: Routine checks, drafts & staging</div>
+                  <div class="legend-row"><span class="legend-dot dot-l2"></span> L2 Live Outreach: Telephony calls (Ask-First Gate)</div>
+                  <div class="legend-row"><span class="legend-dot dot-l3"></span> L3 Hard-Blocked: Financial transfers & medical dosage</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Panel 3: Live Heartbeat & Telemetry -->
+            <div class="tab-panel" id="panel-heartbeat">
+              <div class="panel-header-row">
+                <h3 class="panel-heading">Companion Heartbeat</h3>
+                <span class="status-dot status-dot-sm online"></span>
+              </div>
+              <div class="heartbeat-panel-body">
+                <div class="heartbeat-pulse-box">
+                  <div class="pulse-visual">
+                    <svg class="pulse-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                    <div class="pulse-stats">
+                      <div class="pulse-number" id="hb-beat-number">Beat #48</div>
+                      <div class="pulse-status mono" id="hb-status-label">Active • Every 30s</div>
+                    </div>
+                  </div>
+                  <button class="tactile-btn" id="btn-fire-heartbeat">Pulse Now</button>
+                </div>
+                <div class="heartbeat-telemetry-grid">
+                  <div class="telemetry-card">
+                    <div class="telemetry-label">QUIET HOURS</div>
+                    <div class="telemetry-val mono">22:00 - 07:00</div>
+                    <div class="telemetry-sub" id="hb-quiet-sub">Nightly silence enforced</div>
+                  </div>
+                  <div class="telemetry-card">
+                    <div class="telemetry-label">CHROME DEVTOOLS</div>
+                    <div class="telemetry-val mono" id="hb-chrome-val">CDP Ready</div>
+                    <div class="telemetry-sub">Port 9222 live watcher</div>
+                  </div>
+                  <div class="telemetry-card">
+                    <div class="telemetry-label">GMAIL IMAP</div>
+                    <div class="telemetry-val mono" id="hb-gmail-val">Configured</div>
+                    <div class="telemetry-sub">Receipt & alert scanner</div>
+                  </div>
+                  <div class="telemetry-card">
+                    <div class="telemetry-label">TWILIO MEDIA</div>
+                    <div class="telemetry-val mono">WebSocket WS</div>
+                    <div class="telemetry-sub">Full-duplex audio bridge</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Panel 4: SOUL.MD (Blue) -->
+            <div class="tab-panel" id="panel-soul">
+              <div class="panel-header-row">
+                <div class="soul-header-tag">
+                  <span class="soul-badge-blue">SOUL.MD</span>
+                  <h3 class="panel-heading">Pico Constitution</h3>
+                </div>
+                <span class="mono-badge">Living Persona</span>
+              </div>
+              <div class="soul-card-container">
+                <div class="soul-callout-card">
+                  <h4 class="soul-card-title">Prime Directive</h4>
+                  <p class="soul-card-text">Pico exists to build unbreakable daily momentum without digital fatigue. Pico is a friend who tells you the truth, keeps your routine on track, and protects your focus.</p>
+                </div>
+                <div class="soul-section">
+                  <h4 class="soul-section-title">Four Hard Guardrails</h4>
+                  <div class="guardrail-item">
+                    <strong>SEBI Financial Shield:</strong> Zero algorithmic stock recommendations; compound SIP calculations only.
+                  </div>
+                  <div class="guardrail-item">
+                    <strong>Medical Dosage Shield:</strong> Never prescribe dosages; always defer to licensed professionals.
+                  </div>
+                  <div class="guardrail-item">
+                    <strong>Anti-Dependency Shield:</strong> Never incentivize attachment or continuous doom-chatting; nudge to real-world action.
+                  </div>
+                  <div class="guardrail-item">
+                    <strong>7-Day Staging Memory:</strong> Observations sit in staging before graduating to permanent memory facts.
+                  </div>
+                </div>
+                <div class="soul-section">
+                  <h4 class="soul-section-title">Voice & Temperament</h4>
+                  <p class="soul-card-text">80% Muse AI calm spatial canvas + 20% Duolingo physical joy. Strict zero-emoji policy for intentional typography.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Panel 5: MEMORY.MD (Red) -->
+            <div class="tab-panel" id="panel-memory">
+              <div class="panel-header-row">
+                <div class="memory-header-tag">
+                  <span class="memory-badge-red">MEMORY.MD</span>
+                  <h3 class="panel-heading">Hermes Memory Pack</h3>
+                </div>
+                <span class="mono-badge" id="right-memory-count">1 facts</span>
+              </div>
+              <div class="memory-panel-body">
+                <div class="memory-facts-list" id="right-memory-list">
+                  <!-- Dynamic Hermes facts loaded from /api/what-i-know -->
+                </div>
+                <div class="memory-reflection-card">
+                  <div class="memory-reflection-title">Nightly Scorecard & Reflection</div>
+                  <div class="memory-reflection-content" id="right-memory-reflection">Loading reflection report...</div>
+                </div>
               </div>
             </div>
 

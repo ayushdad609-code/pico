@@ -770,25 +770,380 @@ input, select, textarea {
 
 .tab-btn {
   flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
   padding: 7px 4px;
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 700;
   color: var(--ink-secondary);
   border-radius: var(--radius-sm);
   text-align: center;
   transition: all 120ms ease;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.tab-icon {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
 }
 
 .tab-btn:hover {
   color: var(--ink-primary);
+  background: rgba(255, 255, 255, 0.5);
 }
 
 .tab-btn.active {
   background: var(--bg-surface);
   color: var(--ink-primary);
   box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+/* Soul.md (Blue Color Scheme) */
+.tab-btn-soul {
+  color: #0284C7;
+  font-weight: 700;
+}
+
+.tab-btn-soul:hover {
+  background: #F0F9FF;
+  color: #0369A1;
+}
+
+.tab-btn-soul.active {
+  background: #E0F2FE !important;
+  color: #0369A1 !important;
+  border-bottom: 2px solid #0284C7;
+}
+
+/* Memory.md (Red Color Scheme) */
+.tab-btn-memory {
+  color: #DC2626;
+  font-weight: 700;
+}
+
+.tab-btn-memory:hover {
+  background: #FEF2F2;
+  color: #B91C1C;
+}
+
+.tab-btn-memory.active {
+  background: #FEE2E2 !important;
+  color: #B91C1C !important;
+  border-bottom: 2px solid #DC2626;
+}
+
+/* Soul.md Panel (Blue Accent) */
+.soul-header-tag {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.soul-badge-blue {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  background: #E0F2FE;
+  color: #0284C7;
+  border: 1px solid #BAE6FD;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.soul-card-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.soul-callout-card {
+  background: #F0F9FF;
+  border: 1px solid #BAE6FD;
+  border-left: 4px solid #0284C7;
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+}
+
+.soul-card-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0369A1;
+  margin-bottom: 4px;
+}
+
+.soul-card-text {
+  font-size: 12.5px;
+  color: #0C4A6E;
+  line-height: 1.5;
+}
+
+.soul-section {
+  background: var(--bg-canvas);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.soul-section-title {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--ink-primary);
+  margin-bottom: 2px;
+}
+
+.guardrail-item {
+  font-size: 12px;
+  color: var(--ink-secondary);
+  line-height: 1.4;
+  padding-left: 8px;
+  border-left: 2px solid #BAE6FD;
+}
+
+/* Memory.md Panel (Red Accent) */
+.memory-header-tag {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.memory-badge-red {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  background: #FEE2E2;
+  color: #DC2626;
+  border: 1px solid #FECACA;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.memory-panel-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.memory-facts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.memory-fact-item {
+  background: var(--bg-canvas);
+  border: 1px solid var(--border-hairline);
+  border-left: 3px solid #EF4444;
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+}
+
+.memory-fact-key {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #DC2626;
+  font-family: var(--font-mono);
+}
+
+.memory-fact-val {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-primary);
+  margin-top: 2px;
+}
+
+.memory-fact-meta {
+  font-size: 10px;
+  color: var(--ink-tertiary);
+  margin-top: 4px;
+}
+
+.memory-reflection-card {
+  background: #FFF1F2;
+  border: 1px solid #FECDD3;
+  border-left: 4px solid #E11D48;
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+}
+
+.memory-reflection-title {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #9F1239;
+  margin-bottom: 4px;
+}
+
+.memory-reflection-content {
+  font-size: 12px;
+  color: #881337;
+  line-height: 1.5;
+}
+
+/* Approvals Panel */
+.approvals-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.approval-card {
+  background: var(--bg-canvas);
+  border: 1px solid var(--border-hairline);
+  border-bottom: 2px solid var(--border-lip);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+}
+
+.approval-card.approved {
+  border-color: #B7E4A8;
+  background: var(--pico-green-soft);
+}
+
+.approval-card.declined {
+  border-color: #FECACA;
+  background: #FEF2F2;
+  opacity: 0.6;
+}
+
+.approval-level-tag {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--pico-amber);
+  letter-spacing: 0.05em;
+  margin-bottom: 4px;
+}
+
+.approval-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--ink-primary);
+}
+
+.approval-desc {
+  font-size: 12px;
+  color: var(--ink-secondary);
+  margin: 6px 0;
+  line-height: 1.4;
+}
+
+.approval-meta {
+  font-size: 10.5px;
+  color: var(--ink-tertiary);
+  margin-bottom: 10px;
+}
+
+.approval-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.gate-legend {
+  background: var(--bg-subtle);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-top: 6px;
+}
+
+.legend-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--ink-secondary);
+}
+
+.legend-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-pill);
+}
+
+.dot-l0 { background: #0EA5E9; }
+.dot-l1 { background: #10B981; }
+.dot-l2 { background: #F59E0B; }
+.dot-l3 { background: #EF4444; }
+
+/* Heartbeat Panel */
+.heartbeat-panel-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.heartbeat-pulse-box {
+  background: var(--bg-canvas);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.pulse-visual {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pulse-icon {
+  width: 22px;
+  height: 22px;
+  color: var(--pico-green);
+  animation: pulse-dot 2s infinite;
+}
+
+.pulse-number {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink-primary);
+}
+
+.pulse-status {
+  font-size: 11px;
+  color: var(--ink-tertiary);
+}
+
+.heartbeat-telemetry-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+}
+
+.telemetry-card {
+  background: var(--bg-canvas);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-sm);
+  padding: 10px;
+}
+
+.telemetry-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--ink-tertiary);
+  margin-bottom: 2px;
+}
+
+.telemetry-val {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-primary);
+}
+
+.telemetry-sub {
+  font-size: 10px;
+  color: var(--ink-secondary);
+  margin-top: 2px;
 }
 
 .tab-panel {
