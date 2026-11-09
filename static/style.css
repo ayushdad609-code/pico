@@ -84,8 +84,115 @@ input, select, textarea {
 }
 
 /* ==========================================================================
-   TACTILE 3D AFFORDANCES (Duolingo Tactility)
+   21ST.DEV & MAGIC UI COMPONENT ENHANCEMENTS
+   Integrated from @21st-dev/cli (Border Beam, Shimmer, Dock, Radar Wave)
    ========================================================================== */
+
+/* 1. 21st.dev Shimmer Button */
+.shimmer-btn {
+  position: relative;
+  overflow: hidden;
+}
+
+.shimmer-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.28), transparent);
+  transform: skewX(-20deg);
+  pointer-events: none;
+  animation: shimmerGlaze 3.5s infinite ease-in-out;
+}
+
+@keyframes shimmerGlaze {
+  0%, 55% { left: -100%; }
+  100% { left: 160%; }
+}
+
+/* 2. 21st.dev Dock Micro-Elevation on Tab Buttons */
+.tab-switcher.pico-tabs .tab-btn {
+  transform: translateY(0) scale(1);
+  transition: transform 140ms cubic-bezier(0.34, 1.56, 0.64, 1), background 120ms ease, box-shadow 120ms ease;
+}
+
+.tab-switcher.pico-tabs .tab-btn:hover {
+  transform: translateY(-2px) scale(1.04);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+}
+
+.tab-switcher.pico-tabs .tab-btn:active {
+  transform: translateY(1px) scale(0.98);
+}
+
+/* 3. 21st.dev Border Beam Container Glow */
+.border-beam-card {
+  position: relative;
+}
+
+.border-beam-card::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1.5px;
+  background: linear-gradient(135deg, rgba(70, 185, 2, 0.4), rgba(14, 165, 233, 0.3), rgba(245, 158, 11, 0.2), transparent);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+/* 4. 21st.dev Heartbeat Radar Pulse */
+.pulse-visual {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pulse-radar-ring {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1.5px solid var(--pico-green);
+  opacity: 0;
+  pointer-events: none;
+  animation: radarWave 2.2s infinite ease-out;
+}
+
+@keyframes radarWave {
+  0% { transform: scale(0.7); opacity: 0.8; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+
+/* 5. 21st.dev Bento Glow Card Hover */
+.glow-card {
+  position: relative;
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+.glow-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(24, 24, 27, 0.05);
+}
+
+/* 6. Interactive Routine Checkmark Snap */
+.routine-checkbox {
+  transition: transform 150ms cubic-bezier(0.34, 1.56, 0.64, 1), background 120ms ease;
+}
+
+.routine-checkbox:hover {
+  transform: scale(1.12);
+}
+
+.routine-checkbox:active {
+  transform: scale(0.92);
+}
 
 .tactile-btn {
   display: inline-flex;
